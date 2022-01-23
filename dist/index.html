@@ -1,0 +1,49 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ThreeJS Starter</title><script defer="defer" src="bundle.ace042604919c1b867d3.js"></script><link href="main.css" rel="stylesheet"></head><body><canvas class="webgl"></canvas><script id="vertexShader" type="x-shader/x-vertex">varying vec2 vUv;
+    
+    	void main()	{
+    		vUv = uv;
+    		//gl_Position = vec4(position, 1.0 );
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+    	}</script><script id="fragmentShader" type="x-shader/x-fragment">varying vec2 vUv;
+    			uniform float time;
+                uniform vec2 resolution;
+                uniform sampler2D sampleTxt;
+    
+                void main() {
+                    	vec3 c;
+                        //z -> distance between colors
+                        //l -> length of uv and p OR time
+                        float l;
+                        float z = time;
+                        //each frame run 3 iterations for rgb
+                        for(int i=0;i<3;i++) {
+                            float a = 0.5;
+                            //vec2 uv,p = ( gl_FragCoord.xy / resolution.xy ) - a;
+                            //uv = p;
+                            vec2 uv = vUv;
+                            vec2 p = ( gl_FragCoord.xy / resolution.xy ) - abs(sin(vUv));
+                            //uv-=0.25;
+                            p -= .5;
+                            p.x *= resolution.x/resolution.y;
+                            z += .07;
+                            l = length(p);
+                            uv += p/l*(sin(z)+.25)*sin(l*9.-z-z);
+                            c[i] = .01/length(mod(uv,1.)-.5);
+                        } 
+                        gl_FragColor=vec4(c/l+.1,0);
+                }</script><script id="fragmentShader2" type="x-shader/x-fragment">varying vec2 vUv;
+                uniform sampler2D sampleTxt;
+    
+                void main() { 
+                    gl_FragColor = texture2D(sampleTxt,vUv);
+                }</script><script id="fragmentShader3" type="x-shader/x-fragment">uniform float time;
+                varying vec2 vUv;
+
+                void main( void ) {
+                    vec2 position = - 1.0 + 2.0 * vUv;
+
+                    float red = abs( sin( position.x * position.y + time / 5.0 ) );
+                    float green = abs( sin( position.x * position.y + time / 4.0 ) );
+                    float blue = abs( sin( position.x * position.y + time / 3.0 ) );
+                    gl_FragColor = vec4( red, green, blue, 1.0 );
+                }</script><script id="fragmentShader4" type="x-shader/x-fragment"></script></body></html>
