@@ -9,7 +9,7 @@ import Stats from 'three/examples/jsm/libs/stats.module.js';
 //import { BloomEffect, EffectComposer, EffectPass, RenderPass } from "postprocessing";
 //import { GodRaysFakeSunShader, GodRaysDepthMaskShader, GodRaysCombineShader, GodRaysGenerateShader } from './jsm/shaders/GodRaysShader.js';
 
-// AHHHHHH GITHUB TEST
+
 
 // Debug
 const gui = new dat.GUI();
