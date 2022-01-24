@@ -47,12 +47,12 @@ let uniforms = {
     }
 };
 
-// Objects
+// Geometry
 const torusGeo = new THREE.TorusGeometry(.75, .2, 16, 100);
 const planeGeo = new THREE.PlaneGeometry(1, 1);
 const boxGeo = new THREE.BoxGeometry(0.05, 0.05, 0.05);
 const sphereGeo = new THREE.SphereGeometry(.5, 100, 100);
-const circleGeo = new THREE.CircleGeometry(3, 30);
+const circleGeo = new THREE.CircleGeometry(.5, 30);
 
 // Materials
 
@@ -65,7 +65,7 @@ const phongMat = new THREE.MeshPhongMaterial({
 });
 
 const checkTxt = txtLoader.load(`https://threejsfundamentals.org/threejs/resources/images/checker.png`);
-//const checkTxt = txtLoader.load(`checker.png`);
+const skyTxt = txtLoader.load(`skydome.jpg`);
 checkTxt.wrapS = THREE.RepeatWrapping;
 checkTxt.wrapT = THREE.RepeatWrapping;
 checkTxt.repeat.set(10, 10);
@@ -75,12 +75,13 @@ const txtMat = new THREE.MeshBasicMaterial({
     side: THREE.DoubleSide
 })
 
-/* const refractMat = new THREE.MeshPhysicalMaterial({
-    roughness: 0,
-    transmission: 1
-    thickness: 2
-}); */
-
+const skyMat = new THREE.MeshStandardMaterial({
+    map: skyTxt,
+    side: THREE.DoubleSide
+});
+//skyMat.emissive.setHex(`#ffffff`)
+console.log(skyMat)
+// Shaders
 const shaderMat = new THREE.ShaderMaterial({
     uniforms: uniforms,
     vertexShader: document.getElementById('vertexShader').textContent,
@@ -136,38 +137,14 @@ sunMesh.position.x = 1;
 sunMesh.position.y = 1;
 scene.add(sunMesh);
 
-// load boy mesh and boy animations
-/* let boyMixer;
-let boyModel;
-const clips = [];
-gltfLoader.load(`theBoy_animsx2_v1.gltf`, (gltf) => {
-    boyModel = gltf.scene;
-    boyModel.scale.set(.05, .05, .05);
-    scene.add(boyModel);
-    //gltf.scene.scale.set(.05, .05, .05);
-    //scene.add(gltf.scene)
- 
-    boyModel.traverse(function (object) {
-        if (object.isMesh) {
-            object.castShadow = true;
-            //object.receiveShadow = true;
-            //console.log("cast shadow")
-        }
-    });
-    boyMixer = new AnimationMixer(boyModel);
-    const animations = gltf.animations;
-    clips.push(boyMixer.clipAction(animations[0]), boyMixer.clipAction(animations[1]));
- 
-    console.log(clips);
-    console.log(boyMixer);
-    console.log(boyModel);
- 
-    boyMixer.clipAction(gltf.animations[0]).play();
- 
-}); */
+const skydomeMesh = new THREE.Mesh(sphereGeo, skyMat);
+skydomeMesh.scale.set(50, 50, 50);
+scene.add(skydomeMesh);
+
 let mixer;
 let skeleton;
 let boyModel;
+let duneModel;
 //const gltfLoader = new THREE.GLTFLoader();
 gltfLoader.load(`theBoy_animsx2_v3.gltf`, (gltf) => {
     boyModel = gltf.scene;
@@ -189,6 +166,13 @@ gltfLoader.load(`theBoy_animsx2_v3.gltf`, (gltf) => {
     skeleton = new THREE.SkeletonHelper(boyModel);
     skeleton.visible = true;
     scene.add(skeleton);
+});
+
+gltfLoader.load(`dunes_v1.gltf`, (gltf) => {
+    duneModel = gltf.scene;
+    duneModel.position.set(0, -1, 0);
+    duneModel.scale.set(.5, .5, .5);
+    scene.add(duneModel);
 });
 
 
@@ -246,16 +230,21 @@ window.addEventListener('resize', () => {
     renderer.setSize(sizes.width, sizes.height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 })
+
+/**
+ * Mouse Wheel Event
+ */
+new function normalizeWheel(val, min, max) {
+    return (val - min) / (max - min);
+}
 let wheelDeltaY;
 let wheelTotalY = 0;
 window.addEventListener("wheel", event => {
     wheelDeltaY = event.deltaY;
     wheelTotalY += wheelDeltaY;
-    //console.log(wheelDeltaY);
+    console.log(wheelDeltaY);
     //console.log("total Y: " + wheelTotalY);
 });
-
-//mixer.addEventListener('finished', function (e) { console.log("finished anim") }); // properties of e: type, action and direction
 
 /**
  * Camera
@@ -267,10 +256,10 @@ camera.position.y = 0
 camera.position.z = 2
 scene.add(camera)
 
-// Controls
+// Controlsx
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true;
-controls.enabled = false;
+//controls.enabled = false;
 
 /**
  * Renderer
@@ -318,7 +307,7 @@ const tick = () => {
     uniforms['resolution'].value = [window.innerWidth, window.innerHeight];
 
     // Update objects
-    torusMesh.rotation.y = (wheelTotalY / 3800) + (htmlBody.scrollTop / 100);
+    torusMesh.rotation.y = Math.sin((wheelTotalY / 3800) + (htmlBody.scrollTop / 100));
     //planeMesh.rotation.x = .25 * elapsedTime;
     boxMesh.rotation.x = (wheelTotalY / 3800) + (htmlBody.scrollTop / 100);
     boxMesh.rotation.y = (wheelTotalY / 3800) + (htmlBody.scrollTop / 100);
