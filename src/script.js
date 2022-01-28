@@ -155,7 +155,6 @@ function initObjects() {
     //skydomeMesh.castShadow = true;
     scene.add(skydomeMesh);
 
-    //const gltfLoader = new THREE.GLTFLoader();
     gltfLoader.load(`theBoy_animsx2_v3.gltf`, (gltf) => {
         boyModel = gltf.scene;
         boyModel.scale.set(.1, .1, .1);
@@ -177,6 +176,9 @@ function initObjects() {
             if (object.isMesh) {
                 object.castShadow = true;
                 //object.receiveShadow = true;
+            }
+            if (object.name.includes("Hair")) {
+                console.log("object name: " + object.name)
             }
         });
 
