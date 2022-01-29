@@ -52,8 +52,10 @@ let uniforms = {
 
 // init objects
 let autoscroll = true;
-let boxMesh, sphereMesh, sunMesh, skydomeMesh;
-let mixer, skeleton, boyModel, duneModel;
+let boyAnimations, settings;
+let boxMesh, sphereMesh, sunMesh, skydomeMesh, sceneModel;
+let boyMixer1, skeleton, boyModel, duneModel;
+let pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
 
 // init scene
 let wheelDeltaY, wheelTotalY, controls, camera, renderer;
@@ -155,61 +157,60 @@ function initObjects() {
     //skydomeMesh.castShadow = true;
     scene.add(skydomeMesh);
 
-    gltfLoader.load(`theBoy_animsx2_v3.gltf`, (gltf) => {
-        boyModel = gltf.scene;
-        boyModel.scale.set(.1, .1, .1);
-        scene.add(boyModel);
-        mixer = new THREE.AnimationMixer(boyModel);
-        /* gltf.animations.forEach((clip) => {
-            mixer.clipAction(clip).play();
-        }); */
+    gltfLoader.load(`dune+boy_v11.gltf`, (gltf) => {
+        sceneModel = gltf.scene;
 
-        //mixer.clipAction(gltf.animations[0]).setDuration(1).play();
-        //mixer.clipAction(gltf.animations[0]).setLoop(LoopPingPong);
-        mixer.clipAction(gltf.animations[0]).play()//.setLoop(LoopPingPong);
+        //set transforms
+        sceneModel.scale.set(.1, .1, .1);
 
-        console.log(mixer.clipAction(gltf.animations[0]));
-        //console.log(mixer.clipAction(gltf.animations[0]).getRoot());
-        //console.log(mixer.clipAction(gltfObject1.animations[0]).isRunning());
-
-        boyModel.traverse(function (object) {
-            if (object.isMesh) {
-                object.castShadow = true;
-                //object.receiveShadow = true;
-            }
-            if (object.name.includes("Hair")) {
-                console.log("object name: " + object.name)
-            }
-        });
-
-        skeleton = new THREE.SkeletonHelper(boyModel);
-        skeleton.visible = true;
-        scene.add(skeleton);
-    });
-
-    gltfLoader.load(`dunes_v2.gltf`, (gltf) => {
-        duneModel = gltf.scene;
-        duneModel.position.set(-0.9, -3.3, -10.3);
-        duneModel.rotation.set(0, -7.5, 0);
-        duneModel.scale.set(1, 1, 1);
-
-        duneModel.traverse(function (object) {
+        // assign cast shadow
+        sceneModel.traverse(function (object) {
             if (object.isMesh) {
                 //object.castShadow = true;
                 object.receiveShadow = true;
-                //console.log("cast shadow")
-                object.material = duneMat;
+
+
+                if (object.name.includes("Dunes")) {
+                    console.log("object name: " + object.name)
+                    object.material = duneMat;
+                }
             }
         });
 
-        scene.add(duneModel);
+        // add model to scene
+        scene.add(sceneModel);
 
-        /* gui.add(duneModel.position, "x").min(-20).max(5);
-        gui.add(duneModel.position, "y").min(-20).max(5);
-        gui.add(duneModel.position, "z").min(-20).max(5);
-        gui.add(duneModel.rotation, "y").min(-20).max(5); */
+        // show rig skeleton
+        skeleton = new THREE.SkeletonHelper(sceneModel);
+        skeleton.visible = true;
+        scene.add(skeleton);
+
+        // init animation mixer
+        boyMixer1 = new THREE.AnimationMixer(sceneModel);
+        console.log("anim leng: " + gltf.animations.length);
+
+        //boyMixer1.clipAction(gltf.animations[0]).play();
+        //console.log(boyMixer1.clipAction(gltf.animations[0]));
+        boyAnimations = gltf.animations;
+
+        movePos1_NLA = boyMixer1.clipAction(gltf.animations[0]);
+        pole_walking_NLA = boyMixer1.clipAction(gltf.animations[1]);
+        sitting_NLA = boyMixer1.clipAction(gltf.animations[2]);
+        start_walking_NLA = boyMixer1.clipAction(gltf.animations[3]);
+        walk_cycle_NLA = boyMixer1.clipAction(gltf.animations[4]);
+
+        let activeClip = movePos1_NLA;
+        activeClip.play();
+        walk_cycle_NLA.play();
+        activeClip.setEffectiveWeight(0);
+        //boyMixer1.clipAction(movePos1_NLA).play();
+
+        //boyMixer1.clipAction(gltf.animations[3]).setEffectiveWeight(0);
+
+        console.log(boyAnimations);
+        console.log(activeClip);
+        //gui.add(sceneModel.position, "y").min(-20).max(5);
     });
-
 
     // Lights
     {
@@ -239,6 +240,16 @@ function initObjects() {
         scene.add(new THREE.CameraHelper(dirLight.shadow.camera));
     }
 }
+
+function setWeight(action, weight) {
+
+    action.enabled = true;
+    action.setEffectiveTimeScale(1);
+    action.setEffectiveWeight(weight);
+
+}
+
+
 /**
  * INIT SCENE
  */
@@ -320,6 +331,7 @@ function initScene() {
 
 }
 
+
 /**
  * Animate
  */
@@ -348,7 +360,7 @@ const tick = () => {
     boxMesh.rotation.y = (wheelTotalY / 3800) + (htmlBody.scrollTop / 100);
 
     // Update animations
-    if (mixer) {
+    if (boyMixer1) {
         //mixer.update(delta);
 
         //var t = elapsedTime;
@@ -359,7 +371,7 @@ const tick = () => {
         //var t = Math.floor(elapsedTime) / 5;
         //var t = (Math.round(10 * elapsedTime) / 8);
         //console.log("custom time: " + t);
-        mixer.setTime(t);
+        boyMixer1.setTime(t);
     }
 
     // Update stats
