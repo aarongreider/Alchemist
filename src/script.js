@@ -55,7 +55,7 @@ let autoscroll = true;
 let boyAnimations, settings;
 let boxMesh, sphereMesh, sunMesh, skydomeMesh, sceneModel;
 let boyMixer1, skeleton, boyModel, duneModel;
-let pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
+let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
 
 // init scene
 let wheelDeltaY, wheelTotalY, controls, camera, renderer;
@@ -157,7 +157,7 @@ function initObjects() {
     //skydomeMesh.castShadow = true;
     scene.add(skydomeMesh);
 
-    gltfLoader.load(`dune+boy_v11.gltf`, (gltf) => {
+    gltfLoader.load(`dune+boy_v14.gltf`, (gltf) => {
         sceneModel = gltf.scene;
 
         //set transforms
@@ -199,10 +199,10 @@ function initObjects() {
         start_walking_NLA = boyMixer1.clipAction(gltf.animations[3]);
         walk_cycle_NLA = boyMixer1.clipAction(gltf.animations[4]);
 
-        let activeClip = movePos1_NLA;
+        activeClip = movePos1_NLA;
         activeClip.play();
-        walk_cycle_NLA.play();
-        activeClip.setEffectiveWeight(0);
+        //walk_cycle_NLA.play();
+        //activeClip.setEffectiveWeight(0);
         //boyMixer1.clipAction(movePos1_NLA).play();
 
         //boyMixer1.clipAction(gltf.animations[3]).setEffectiveWeight(0);
@@ -210,6 +210,21 @@ function initObjects() {
         console.log(boyAnimations);
         console.log(activeClip);
         //gui.add(sceneModel.position, "y").min(-20).max(5);
+        const folder1 = gui.addFolder('boy controls');
+
+        settings = {
+            'sit down': function () { switchAnims(sitting_NLA) },
+            'walk cycle': function () { switchAnims(walk_cycle_NLA) },
+            'move position 1': function () { switchAnims(movePos1_NLA) },
+            'pole walking': function () { switchAnims(pole_walking_NLA) },
+            'start walking': function () { switchAnims(start_walking_NLA) }
+        }
+        folder1.add(settings, 'sit down');
+        folder1.add(settings, 'walk cycle');
+        folder1.add(settings, 'move position 1');
+        folder1.add(settings, 'pole walking');
+        folder1.add(settings, 'start walking');
+
     });
 
     // Lights
@@ -240,21 +255,20 @@ function initObjects() {
         scene.add(new THREE.CameraHelper(dirLight.shadow.camera));
     }
 }
-
-function setWeight(action, weight) {
-
-    action.enabled = true;
-    action.setEffectiveTimeScale(1);
-    action.setEffectiveWeight(weight);
-
+function switchAnims(newClip) {
+    //activeClip.setEffectiveWeight(0);
+    newClip.setEffectiveWeight(1);
+    newClip.play();
+    activeClip.crossFadeTo(newClip, 1, false);
+    activeClip = newClip;
 }
-
 
 /**
  * INIT SCENE
  */
 
 function initScene() {
+
     /**
      * Sizes
      */
@@ -340,6 +354,7 @@ console.log(htmlBody.scrollHeight);
 console.log(window.innerHeight);
 const tick = () => {
     stats.begin()
+
     if ((htmlBody.scrollTop <= (htmlBody.scrollHeight - window.innerHeight - 10)) && (autoscroll)) {
         htmlBody.scrollTop++;
         //console.log(htmlBody.scrollTop);
