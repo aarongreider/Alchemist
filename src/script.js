@@ -57,12 +57,22 @@ let boxMesh, sphereMesh, sunMesh, skydomeMesh, sceneModel;
 let boyMixer1, skeleton, boyModel, duneModel;
 let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
 
-// init scene
+let timelineCounter;
+function timelineObj(enter, executed, clip) {
+    this.enter = enter;
+    this.executed = executed;
+    this.clip = clip;
+}
+const timeline = [];
+
+/**
+ * INIT OJBECTS
+ */
 let wheelDeltaY, wheelTotalY, controls, camera, renderer;
 let scrollControl = { scrollspeed: 1 };
 
 function initObjects() {
-
+    //#region GEO/TXT
     // Geometry
     //const torusGeo = new THREE.TorusGeometry(.75, .2, 16, 100);
     const planeGeo = new THREE.PlaneGeometry(1, 1);
@@ -79,8 +89,9 @@ function initObjects() {
     const skyTxt = txtLoader.load(`skydome.jpg`);
     const duneBaseTxt = txtLoader.load(`duneMat_baseColor.png`);
     const duneMetalTxt = txtLoader.load(`duneMat_metallicMap.png`);
+    //#endregion
 
-    // Materials
+    //#region MATERIALS
     const redMat = new THREE.MeshBasicMaterial();
     redMat.color = new THREE.Color(0xff0000);
 
@@ -133,9 +144,9 @@ function initObjects() {
         fragmentShader: document.getElementById('fragmentShader3').textContent,
         side: THREE.DoubleSide
     });
+    //#endregion
 
-
-    // Mesh
+    //#region MESH
 
     boxMesh = new THREE.Mesh(boxGeo, phongMat);
     boxMesh.position.y = .15;
@@ -161,6 +172,9 @@ function initObjects() {
     //skydomeMesh.castShadow = true;
     scene.add(skydomeMesh);
 
+    //#endregion
+
+    //#region GLTF
     gltfLoader.load(`dune+boy_v14.gltf`, (gltf) => {
         sceneModel = gltf.scene;
 
@@ -175,7 +189,7 @@ function initObjects() {
 
 
                 if (object.name.includes("Dunes")) {
-                    console.log("object name: " + object.name)
+                    //console.log("object name: " + object.name)
                     object.material = duneMat;
                 }
             }
@@ -191,7 +205,7 @@ function initObjects() {
 
         // init animation mixer
         boyMixer1 = new THREE.AnimationMixer(sceneModel);
-        console.log("anim leng: " + gltf.animations.length);
+        //console.log("anim leng: " + gltf.animations.length);
 
         //boyMixer1.clipAction(gltf.animations[0]).play();
         //console.log(boyMixer1.clipAction(gltf.animations[0]));
@@ -229,35 +243,37 @@ function initObjects() {
         folder1.add(settings, 'pole walking');
         folder1.add(settings, 'start walking');
 
+        initTimeline(boyAnimations);
     });
+    //#endregion
 
-    // Lights
-    {
-        /* const pointLight = new THREE.PointLight(0xffffff, 1)
-        //pointLight.position.set(2, 3, 4);
-        pointLight.position.set(0.5, 1, 0);
-        pointLight.castShadow = true;
-        scene.add(pointLight); */
+    //#region LIGHTS
+    /* const pointLight = new THREE.PointLight(0xffffff, 1)
+    //pointLight.position.set(2, 3, 4);
+    pointLight.position.set(0.5, 1, 0);
+    pointLight.castShadow = true;
+    scene.add(pointLight); */
 
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444);
-        hemiLight.position.set(0, 20, 0);
-        scene.add(hemiLight);
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444);
+    hemiLight.position.set(0, 20, 0);
+    scene.add(hemiLight);
 
 
-        const dirLight = new THREE.DirectionalLight(0xffffff);
-        dirLight.position.set(3, 10, 10);
-        dirLight.intensity = .5;
-        dirLight.castShadow = true;
-        dirLight.shadow.camera.top = 2;
-        dirLight.shadow.camera.bottom = - 2;
-        dirLight.shadow.camera.left = - 2;
-        dirLight.shadow.camera.right = 2;
-        dirLight.shadow.camera.near = 0.1;
-        dirLight.shadow.camera.far = 40;
-        dirLight.target = boxMesh;
-        scene.add(dirLight);
-        scene.add(new THREE.CameraHelper(dirLight.shadow.camera));
-    }
+    const dirLight = new THREE.DirectionalLight(0xffffff);
+    dirLight.position.set(3, 10, 10);
+    dirLight.intensity = .5;
+    dirLight.castShadow = true;
+    dirLight.shadow.camera.top = 2;
+    dirLight.shadow.camera.bottom = - 2;
+    dirLight.shadow.camera.left = - 2;
+    dirLight.shadow.camera.right = 2;
+    dirLight.shadow.camera.near = 0.1;
+    dirLight.shadow.camera.far = 40;
+    dirLight.target = boxMesh;
+    scene.add(dirLight);
+    scene.add(new THREE.CameraHelper(dirLight.shadow.camera));
+    //#endregion
+
 }
 function switchAnims(newClip) {
     //console.log(newClip);
@@ -351,13 +367,26 @@ function initScene() {
 
 }
 
+/**
+ * INIT TIMELINE
+ */
+function initTimeline(animations) {
+    let sitClip, walkClip, moveClip;
+    sitClip = new timelineObj(.03, false, animations[2]);
+    timeline.push(sitClip);
+}
 
 /**
  * Animate
  */
 let htmlBody = document.querySelector("html");
+//let key_sit = Math.round(htmlBody.scrollHeight * .03);
+let key_sit = Math.ceil(((htmlBody.scrollHeight * .03) / 10)) * 10;
+let key_stand = Math.ceil(((htmlBody.scrollHeight * .08) / 10)) * 10;
+
 console.log(htmlBody.scrollHeight);
 console.log(window.innerHeight);
+
 const tick = () => {
     stats.begin()
 
@@ -368,31 +397,49 @@ const tick = () => {
         htmlBody.scrollTop = 0;
         //console.log("scrolltop bottom " + htmlBody.scrollTop);
     }
-    //const clock = new THREE.Clock()
-    const elapsedTime = clock.getElapsedTime();
-    const delta = clock.getDelta();
+    // Clock
+    //const elapsedTime = clock.getElapsedTime();
+    //const delta = clock.getDelta();
 
     // Update Uniforms
     uniforms['time'].value = performance.now() / 1000;
     uniforms['resolution'].value = [window.innerWidth, window.innerHeight];
 
     // Update objects
-    boxMesh.rotation.x = (wheelTotalY / 3800) + (htmlBody.scrollTop / 100);
-    boxMesh.rotation.y = (wheelTotalY / 3800) + (htmlBody.scrollTop / 100);
+    boxMesh.rotation.x = (htmlBody.scrollTop / 100);
+    boxMesh.rotation.y = (htmlBody.scrollTop / 100);
 
-    // Update animations
+    // Update animation timing
     if (boyMixer1) {
         //mixer.update(delta);
 
         //var t = elapsedTime;
         //var t = (wheelTotalY / 2500) + (elapsedTime / 2);
-        var t = (wheelTotalY / 3800) + (htmlBody.scrollTop / 200);
+        let t = (htmlBody.scrollTop / 200);
         //var t = (Math.random() / 5) + (elapsedTime);
         //var t = Math.sin(elapsedTime) * 10;
         //var t = Math.floor(elapsedTime) / 5;
         //var t = (Math.round(10 * elapsedTime) / 8);
         //console.log("custom time: " + t);
         boyMixer1.setTime(t);
+        //console.log(htmlBody.scrollTop < htmlBody.scrollHeight / 2);
+    }
+    //console.log(Math.ceil(htmlBody.scrollTop / 10) * 10);
+    //console.log(`sit key: ${key_sit}`);
+    //console.log(`sit key: ${key_stand}`);
+
+    switch (Math.ceil(htmlBody.scrollTop / 10) * 10) {
+
+        case key_sit:
+            //console.log(`sit key: ${htmlBody.scrollTop}`);
+            //switchAnims(sitting_NLA);
+            break;
+
+        case key_stand:
+            //console.log(`stand key: ${htmlBody.scrollTop}`);
+            //switchAnims(walk_cycle_NLA);
+            break;
+
     }
 
     // Update stats
@@ -413,4 +460,5 @@ const tick = () => {
 
 initObjects();
 initScene();
+//initTimeline();
 tick();
