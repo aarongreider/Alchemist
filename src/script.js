@@ -59,6 +59,7 @@ let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, 
 
 // init scene
 let wheelDeltaY, wheelTotalY, controls, camera, renderer;
+let scrollControl = { scrollspeed: 1 };
 
 function initObjects() {
 
@@ -256,17 +257,18 @@ function initObjects() {
     }
 }
 function switchAnims(newClip) {
-    //activeClip.setEffectiveWeight(0);
+    //console.log(newClip);
+    newClip.enabled = true;
     newClip.setEffectiveWeight(1);
     newClip.play();
-    activeClip.crossFadeTo(newClip, 1, false);
+    activeClip.crossFadeTo(newClip, .25, false);
+
     activeClip = newClip;
 }
 
 /**
  * INIT SCENE
  */
-
 function initScene() {
 
     /**
@@ -334,13 +336,13 @@ function initScene() {
     renderer.shadowMap.type = PCFShadowMap;
 
     // Load GUI Items
-    //autoscroll = true;
-    var params = {
-        scroll: autoscroll
-    };
-    gui.add(params, "scroll").name("scroll").onChange(function () {
+    gui.add({ scroll: autoscroll }, "scroll").name("scroll").onChange(function () {
         if (autoscroll) { console.log("no autoscroll") }
         autoscroll = !autoscroll;
+    });
+
+    gui.add(scrollControl, "scrollspeed", -5, 5).name("scrollspeed").onChange(function () {
+        console.log("change" + scrollControl.scrollspeed);
     });
 
 }
@@ -356,7 +358,7 @@ const tick = () => {
     stats.begin()
 
     if ((htmlBody.scrollTop <= (htmlBody.scrollHeight - window.innerHeight - 10)) && (autoscroll)) {
-        htmlBody.scrollTop++;
+        htmlBody.scrollTop += scrollControl.scrollspeed;
         //console.log(htmlBody.scrollTop);
     } else if (autoscroll) {
         htmlBody.scrollTop = 0;
