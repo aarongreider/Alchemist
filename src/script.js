@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'dat.gui'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { AnimationMixer, PCFShadowMap, SkeletonHelper } from 'three'
+import { AnimationMixer, BlendingSrcFactor, DstAlphaFactor, OneFactor, PCFShadowMap, SkeletonHelper, SrcAlphaFactor } from 'three'
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 //import { BloomEffect, EffectComposer, EffectPass, RenderPass } from "postprocessing";
 //import { GodRaysFakeSunShader, GodRaysDepthMaskShader, GodRaysCombineShader, GodRaysGenerateShader } from './jsm/shaders/GodRaysShader.js';
@@ -114,7 +114,10 @@ function initObjects() {
         uniforms: uniforms,
         vertexShader: document.getElementById('vertexShader').textContent,
         fragmentShader: document.getElementById('fragmentShader').textContent,
-        side: THREE.DoubleSide
+        side: THREE.DoubleSide,
+        blending: THREE.CustomBlending,
+        blendSrc: SrcAlphaFactor,
+        blendDst: DstAlphaFactor,
     });
 
     const shaderMat2 = new THREE.ShaderMaterial({
@@ -317,7 +320,8 @@ function initScene() {
     camera.position.y = 0
     camera.position.z = 2
     scene.add(camera)
-    gui.add(camera.position, "y").min(-5).max(5);
+    gui.add(camera.position, "y").min(-10).max(10);
+    gui.add(camera.position, "x").min(-10).max(10);
 
     // Controls
     controls = new OrbitControls(camera, canvas)

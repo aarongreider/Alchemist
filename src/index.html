@@ -51,7 +51,8 @@
                             uv += p/l*(sin(z)+.25)*sin(l*9.-z-z);
                             c[i] = .01/length(mod(uv,1.)-.5);
                         } 
-                        gl_FragColor=vec4(c/l+.1,0);
+                        //gl_FragColor=vec4(c/l + 0.1, c/l);
+                        gl_FragColor=vec4(c/l, (c.x+c.y+c.z));
                 }
     </script>
 
