@@ -54,8 +54,9 @@ let uniforms = {
 let autoscroll = true;
 let boyAnimations, settings;
 let boxMesh, sphereMesh, sunMesh, skydomeMesh, sceneModel;
-let boyMixer1, skeleton, boyModel, duneModel;
+let boyMixer1, skeleton;
 let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
+let boyGroup = new THREE.Group();
 
 let timelineCounter;
 function timelineObj(enter, executed, clip) {
@@ -188,14 +189,20 @@ function initObjects() {
             if (object.isMesh) {
                 //object.castShadow = true;
                 object.receiveShadow = true;
+                //console.log("object name: " + object.name)
 
 
                 if (object.name.includes("Dunes")) {
                     //console.log("object name: " + object.name)
                     object.material = duneMat;
                 }
+                /* if (object.name.includes("Body") || object.name.includes("Hair") || object.name.includes("Eye_Left") || object.name.includes("Eye_Right")) {
+                    console.log("object name: " + object.name)
+                    boyGroup.add(this);
+                } */
             }
         });
+        //console.log(boyGroup);
 
         // add model to scene
         scene.add(sceneModel);
@@ -378,28 +385,9 @@ function initTimeline(animations) {
     timeline.push(sitClip);
 }
 
-function checkTimeline(time, clip) {
-
-    /*     switch (time) {
-            case clip.enter:
-                console.log(`sit key: ${htmlBody.scrollTop}`);
-                switchAnims(clip);
-                break;
-    
-            case key_stand:
-                //console.log(`stand key: ${htmlBody.scrollTop}`);
-                //switchAnims(walk_cycle_NLA);
-                break;
-        } */
-    //if (time < clip.)
-}
-
 /**
  * Animate
  */
-//let key_sit = Math.round(htmlBody.scrollHeight * .03);
-let key_sit = Math.ceil(((htmlBody.scrollHeight * .03) / 10)) * 10;
-let key_stand = Math.ceil(((htmlBody.scrollHeight * .08) / 10)) * 10;
 
 console.log(htmlBody.scrollHeight);
 console.log(window.innerHeight);
