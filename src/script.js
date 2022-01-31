@@ -65,12 +65,14 @@ function timelineObj(enter, executed, clip) {
 }
 const timeline = [];
 
+let wheelDeltaY, wheelTotalY, controls, camera, renderer;
+let scrollControl = { scrollspeed: 1 };
+let htmlBody = document.querySelector("html");
+let mixerLoaded = false;
+
 /**
  * INIT OJBECTS
  */
-let wheelDeltaY, wheelTotalY, controls, camera, renderer;
-let scrollControl = { scrollspeed: 1 };
-
 function initObjects() {
     //#region GEO/TXT
     // Geometry
@@ -276,7 +278,7 @@ function initObjects() {
 
 }
 function switchAnims(newClip) {
-    //console.log(newClip);
+    console.log(newClip);
     newClip.enabled = true;
     newClip.setEffectiveWeight(1);
     newClip.play();
@@ -372,14 +374,29 @@ function initScene() {
  */
 function initTimeline(animations) {
     let sitClip, walkClip, moveClip;
-    sitClip = new timelineObj(.03, false, animations[2]);
+    sitClip = new timelineObj(.03, false, boyMixer1.clipAction(animations[2]));
     timeline.push(sitClip);
+}
+
+function checkTimeline(time, clip) {
+
+    /*     switch (time) {
+            case clip.enter:
+                console.log(`sit key: ${htmlBody.scrollTop}`);
+                switchAnims(clip);
+                break;
+    
+            case key_stand:
+                //console.log(`stand key: ${htmlBody.scrollTop}`);
+                //switchAnims(walk_cycle_NLA);
+                break;
+        } */
+    //if (time < clip.)
 }
 
 /**
  * Animate
  */
-let htmlBody = document.querySelector("html");
 //let key_sit = Math.round(htmlBody.scrollHeight * .03);
 let key_sit = Math.ceil(((htmlBody.scrollHeight * .03) / 10)) * 10;
 let key_stand = Math.ceil(((htmlBody.scrollHeight * .08) / 10)) * 10;
@@ -387,7 +404,12 @@ let key_stand = Math.ceil(((htmlBody.scrollHeight * .08) / 10)) * 10;
 console.log(htmlBody.scrollHeight);
 console.log(window.innerHeight);
 
+let i = 0;
+
 const tick = () => {
+
+    //#region BASIC
+
     stats.begin()
 
     if ((htmlBody.scrollTop <= (htmlBody.scrollHeight - window.innerHeight - 10)) && (autoscroll)) {
@@ -397,9 +419,6 @@ const tick = () => {
         htmlBody.scrollTop = 0;
         //console.log("scrolltop bottom " + htmlBody.scrollTop);
     }
-    // Clock
-    //const elapsedTime = clock.getElapsedTime();
-    //const delta = clock.getDelta();
 
     // Update Uniforms
     uniforms['time'].value = performance.now() / 1000;
@@ -409,38 +428,45 @@ const tick = () => {
     boxMesh.rotation.x = (htmlBody.scrollTop / 100);
     boxMesh.rotation.y = (htmlBody.scrollTop / 100);
 
-    // Update animation timing
-    if (boyMixer1) {
-        //mixer.update(delta);
+    //#endregion
 
-        //var t = elapsedTime;
-        //var t = (wheelTotalY / 2500) + (elapsedTime / 2);
-        let t = (htmlBody.scrollTop / 200);
-        //var t = (Math.random() / 5) + (elapsedTime);
-        //var t = Math.sin(elapsedTime) * 10;
-        //var t = Math.floor(elapsedTime) / 5;
-        //var t = (Math.round(10 * elapsedTime) / 8);
-        //console.log("custom time: " + t);
-        boyMixer1.setTime(t);
-        //console.log(htmlBody.scrollTop < htmlBody.scrollHeight / 2);
+    //#region LOADED
+
+    //only execute if mixer is loaded
+    if (!mixerLoaded) {
+        if (boyMixer1) {
+            mixerLoaded = true;
+            console.log("mixer loaded");
+        }
+    } else {
+        // Update animation timing
+        {
+            let t = (htmlBody.scrollTop / 200);
+            boyMixer1.setTime(t);
+            //console.log("custom time: " + t);
+        }
+
+        //console.log(Math.ceil(htmlBody.scrollTop / 10) * 10);
+        //console.log(`sit key: ${key_sit}`);
+        //console.log(`sit key: ${key_stand}`);
+        {
+            if (i < timeline.length) {
+                let t = Math.ceil(htmlBody.scrollTop / 10) * 10;
+                let key = Math.ceil(((htmlBody.scrollHeight * timeline[i].enter) / 10)) * 10;
+                console.log(t);
+
+                if (!timeline[i].executed && key == t) {
+                    console.log(timeline[i]);
+                    //checkTimeline(Math.ceil(htmlBody.scrollTop / 10) * 10);
+                    //console.log(timeline[i].clip);
+                    switchAnims(timeline[i].clip);
+                    timeline[i].executed = true;
+                    i++;
+                }
+            }
+        }
     }
-    //console.log(Math.ceil(htmlBody.scrollTop / 10) * 10);
-    //console.log(`sit key: ${key_sit}`);
-    //console.log(`sit key: ${key_stand}`);
-
-    switch (Math.ceil(htmlBody.scrollTop / 10) * 10) {
-
-        case key_sit:
-            //console.log(`sit key: ${htmlBody.scrollTop}`);
-            //switchAnims(sitting_NLA);
-            break;
-
-        case key_stand:
-            //console.log(`stand key: ${htmlBody.scrollTop}`);
-            //switchAnims(walk_cycle_NLA);
-            break;
-
-    }
+    //#endregion
 
     // Update stats
     stats.update();
@@ -452,6 +478,7 @@ const tick = () => {
     renderer.render(scene, camera);
 
     stats.end()
+
     // Call tick again on the next frame
     requestAnimationFrame(tick);
 }
