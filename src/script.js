@@ -7,7 +7,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { AnimationMixer, BlendingSrcFactor, DstAlphaFactor, OneFactor, PCFShadowMap, SkeletonHelper, SrcAlphaFactor } from 'three'
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 //import { BloomEffect, EffectComposer, EffectPass, RenderPass } from "postprocessing";
-//import { GodRaysFakeSunShader, GodRaysDepthMaskShader, GodRaysCombineShader, GodRaysGenerateShader } from './jsm/shaders/GodRaysShader.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 
 
@@ -32,11 +34,6 @@ const canvas = document.querySelector('canvas.webgl');
 // Scene
 const scene = new THREE.Scene();
 
-// Postprocessing
-/* const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-composer.addPass(new EffectPass(camera, new BloomEffect())); */
-
 // Uniforms
 let uniforms = {
     time: { value: 1.0 },
@@ -51,12 +48,22 @@ let uniforms = {
  */
 
 // init objects
+const bloomLayer = new THREE.Layers();
+bloomLayer.set(1);
+
+let effectComposer, renderPass, bloomPass;
+const bloomParams = {
+    exposure: 1,
+    bloomStrength: 1.5,
+    bloomThreshold: 0,
+    bloomRadius: 0
+};
+
 let autoscroll = true;
 let boyAnimations, settings;
 let boxMesh, sphereMesh, sunMesh, skydomeMesh, sceneModel;
-let boyMixer1, skeleton;
+let boyMixer1, skeleton, boyModel, duneModel;
 let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
-let boyGroup = new THREE.Group();
 
 let timelineCounter;
 function timelineObj(enter, executed, clip) {
@@ -123,6 +130,17 @@ function initObjects() {
         metalnessMap: duneMetalTxt
     });
 
+    const glowMat = new THREE.MeshStandardMaterial({
+        emissive: 0xffffff,
+        emissiveIntensity: 10,
+        transparent: false
+
+        /* color: new THREE.Color(1, 1, 1),
+        emissiveIntensity: 1,
+        emissive: new THREE.Color(1, 0, 0), */
+
+    });
+
     // Shader Materials
     const shaderMat = new THREE.ShaderMaterial({
         uniforms: uniforms,
@@ -151,7 +169,7 @@ function initObjects() {
 
     //#region MESH
 
-    boxMesh = new THREE.Mesh(boxGeo, phongMat);
+    boxMesh = new THREE.Mesh(boxGeo, glowMat);
     boxMesh.position.y = .15;
     boxMesh.position.x = .15;
     boxMesh.castShadow = true;
@@ -178,42 +196,62 @@ function initObjects() {
     //#endregion
 
     //#region GLTF
-    gltfLoader.load(`dune+boy_v14.gltf`, (gltf) => {
-        sceneModel = gltf.scene;
+
+    /**
+     * LOAD DUNE GLTF 
+     */
+    gltfLoader.load(`dunes_v15.gltf`, (gltf) => {
+        duneModel = gltf.scene;
 
         //set transforms
-        sceneModel.scale.set(.1, .1, .1);
+        duneModel.scale.set(.1, .1, .1);
 
         // assign cast shadow
-        sceneModel.traverse(function (object) {
+        duneModel.traverse(function (object) {
             if (object.isMesh) {
                 //object.castShadow = true;
                 object.receiveShadow = true;
                 //console.log("object name: " + object.name)
 
-
                 if (object.name.includes("Dunes")) {
                     //console.log("object name: " + object.name)
                     object.material = duneMat;
                 }
-                /* if (object.name.includes("Body") || object.name.includes("Hair") || object.name.includes("Eye_Left") || object.name.includes("Eye_Right")) {
-                    console.log("object name: " + object.name)
-                    boyGroup.add(this);
-                } */
             }
         });
-        //console.log(boyGroup);
-
         // add model to scene
-        scene.add(sceneModel);
+        scene.add(duneModel);
+    });
+
+    /**
+     * LOAD BOY GLTF 
+     */
+    gltfLoader.load(`boy_v15.gltf`, (gltf) => {
+        boyModel = gltf.scene;
+
+        //set transforms
+        boyModel.scale.set(.1, .1, .1);
+
+        // assign cast shadow
+        boyModel.traverse(function (object) {
+            if (object.isMesh) {
+                //object.castShadow = true;
+                //object.receiveShadow = true;
+                //console.log("object name: " + object.name)
+                //object.material = txtMat;
+            }
+        });
+
+        // add BOY to scene
+        scene.add(boyModel);
 
         // show rig skeleton
-        skeleton = new THREE.SkeletonHelper(sceneModel);
+        skeleton = new THREE.SkeletonHelper(boyModel);
         skeleton.visible = true;
         scene.add(skeleton);
 
         // init animation mixer
-        boyMixer1 = new THREE.AnimationMixer(sceneModel);
+        boyMixer1 = new THREE.AnimationMixer(boyModel);
         //console.log("anim leng: " + gltf.animations.length);
 
         //boyMixer1.clipAction(gltf.animations[0]).play();
@@ -226,7 +264,7 @@ function initObjects() {
         start_walking_NLA = boyMixer1.clipAction(gltf.animations[3]);
         walk_cycle_NLA = boyMixer1.clipAction(gltf.animations[4]);
 
-        activeClip = movePos1_NLA;
+        activeClip = walk_cycle_NLA;
         activeClip.play();
         //walk_cycle_NLA.play();
         //activeClip.setEffectiveWeight(0);
@@ -236,7 +274,7 @@ function initObjects() {
 
         console.log(boyAnimations);
         console.log(activeClip);
-        //gui.add(sceneModel.position, "y").min(-20).max(5);
+        //gui.add(duneModel.position, "y").min(-20).max(5);
         const folder1 = gui.addFolder('boy controls');
 
         settings = {
@@ -319,6 +357,7 @@ function initScene() {
         // Update renderer
         renderer.setSize(sizes.width, sizes.height)
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+        //effectComposer.setSize(sizes.width, sizes.height)
     })
 
     /**
@@ -364,6 +403,21 @@ function initScene() {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = PCFShadowMap;
 
+    // Postprocessing
+    //#region BLOOM
+
+
+    effectComposer = new EffectComposer(renderer);
+    renderPass = new RenderPass(scene, camera);
+
+    bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.95);
+
+    effectComposer.addPass(renderPass);
+    effectComposer.addPass(bloomPass);
+
+
+    //#endregion
+
     // Load GUI Items
     gui.add({ scroll: autoscroll }, "scroll").name("scroll").onChange(function () {
         if (autoscroll) { console.log("no autoscroll") }
@@ -372,6 +426,19 @@ function initScene() {
 
     gui.add(scrollControl, "scrollspeed", -5, 5).name("scrollspeed").onChange(function () {
         console.log("change" + scrollControl.scrollspeed);
+    });
+    const folder2 = gui.addFolder('bloom controls');
+    folder2.add(bloomParams, 'exposure', 0.1, 2).onChange(function (value) {
+        renderer.toneMappingExposure = Math.pow(value, 4.0);
+    });
+    folder2.add(bloomParams, 'bloomThreshold', 0.0, 1.0).onChange(function (value) {
+        bloomPass.threshold = Number(value);
+    });
+    folder2.add(bloomParams, 'bloomStrength', 0.0, 3.0).onChange(function (value) {
+        bloomPass.strength = Number(value);
+    });
+    folder2.add(bloomParams, 'bloomRadius', 0.0, 1.0).step(0.01).onChange(function (value) {
+        bloomPass.radius = Number(value);
     });
 
 }
@@ -382,7 +449,12 @@ function initScene() {
 function initTimeline(animations) {
     let sitClip, walkClip, moveClip;
     sitClip = new timelineObj(.03, false, boyMixer1.clipAction(animations[2]));
-    timeline.push(sitClip);
+    walkClip = new timelineObj(.08, false, boyMixer1.clipAction(animations[4]));
+
+    timeline.push(sitClip, walkClip,
+        new timelineObj(.11, false, boyMixer1.clipAction(animations[1])),
+        new timelineObj(.14, false, boyMixer1.clipAction(animations[3])))
+    console.log(timeline);
 }
 
 /**
@@ -441,10 +513,10 @@ const tick = () => {
             if (i < timeline.length) {
                 let t = Math.ceil(htmlBody.scrollTop / 10) * 10;
                 let key = Math.ceil(((htmlBody.scrollHeight * timeline[i].enter) / 10)) * 10;
-                console.log(t);
+                //console.log(t);
 
                 if (!timeline[i].executed && key == t) {
-                    console.log(timeline[i]);
+                    //console.log(timeline[i]);
                     //checkTimeline(Math.ceil(htmlBody.scrollTop / 10) * 10);
                     //console.log(timeline[i].clip);
                     switchAnims(timeline[i].clip);
@@ -463,7 +535,8 @@ const tick = () => {
     controls.update();
 
     // Render
-    renderer.render(scene, camera);
+    effectComposer.render();
+    //renderer.render(scene, camera);
 
     stats.end()
 
