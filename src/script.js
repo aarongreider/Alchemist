@@ -60,7 +60,7 @@ let boxMesh, sphereMesh;
 let boyMixer1, skeleton, boyModel, duneModel;
 let activeClip;
 
-let sceneCounter = 0;
+let activeSceneNum = 0;
 /* function timelineObj(enter, executed, clip) {
     this.enter = enter;
     this.executed = executed;
@@ -88,7 +88,7 @@ function initObjects() {
     // Geometry
     //const torusGeo = new THREE.TorusGeometry(.75, .2, 16, 100);
     const planeGeo = new THREE.PlaneGeometry(1, 1);
-    const boxGeo = new THREE.BoxGeometry(0.05, 0.05, 0.05);
+    const boxGeo = new THREE.BoxGeometry(1, 1, 1);
     const sphereGeo = new THREE.SphereGeometry(.5, 100, 100);
     const circleGeo = new THREE.CircleGeometry(.5, 30);
 
@@ -157,6 +157,11 @@ function initObjects() {
     sphereMesh.position.set(0, 0, 0);
     scene.add(sphereMesh);
 
+    boxMesh = new THREE.Mesh(boxGeo, glowMat);
+    boxMesh.scale.set(1, 1, 1);
+    boxMesh.position.set(-1, 1, -1);
+    scene.add(boxMesh);
+
     //#endregion
 
     //#region GLTF
@@ -183,7 +188,7 @@ function initObjects() {
     scene.add(new THREE.CameraHelper(dirLight.shadow.camera));
     //#endregion
 }
-function switchAnims(newClip) {
+function switchGLTFAnims(newClip) {
     console.log(newClip);
     newClip.enabled = true;
     newClip.setEffectiveWeight(1);
@@ -301,19 +306,29 @@ function initTimeline() {
             'move sphere by x', -1,
             function () {
                 gsapT1.clear();
-                gsapT1.to(sphereMesh.position, { duration: 1, x: 1 });
+                gsapT1.to(sphereMesh.position, { duration: 1, x: sphereMesh.position.x + 1 });
                 gsapT1.to(sphereMesh.position, { duration: 1, x: sphereMesh.position.x });
             }
         ),
         new timelineObj(
-            'move sphere by x', -1,
+            'move sphere by y', -1,
             function () {
                 gsapT1.clear();
-                gsapT1.to(sphereMesh.position, { duration: 1, y: 1 });
+                gsapT1.to(sphereMesh.position, { duration: 1, y: sphereMesh.position.y + 1 });
                 gsapT1.to(sphereMesh.position, { duration: 1, y: sphereMesh.position.y });
             }
         ),
+        new timelineObj(
+            'move sphere by z', -1,
+            function () {
+                gsapT1.clear();
+                gsapT1.to(sphereMesh.position, { duration: 1, z: sphereMesh.position.z + 1 });
+                gsapT1.to(sphereMesh.position, { duration: 1, z: sphereMesh.position.z });
+            }
+        ),
     );
+    initLayers();
+    playScene(timelineClips[activeSceneNum]);
 
     // load GUI items
 
@@ -331,21 +346,30 @@ function initTimeline() {
     // continue to next scene
     gui.add({
         nextScene: function () {
-            console.log(`active scene: ${sceneCounter}`);
-            console.log(timelineClips[sceneCounter]);
-            gsapT1.repeat(timelineClips[sceneCounter].repeat);
-            timelineClips[sceneCounter].playActions();
-            sceneCounter++;
+            console.log(`timelineClips length ${timelineClips.length}`)
+            if (activeSceneNum < timelineClips.length - 1) {
+                activeSceneNum++;
+                playScene(timelineClips[activeSceneNum])
+            } else {
+                activeSceneNum = 0;
+                playScene(timelineClips[activeSceneNum])
+            }
         }
     }, 'nextScene');
 }
 
-function advanceScene() {
-    console.log(`active scene: ${sceneCounter}`);
-    console.log(timelineClips[sceneCounter]);
-    gsapT1.repeat(timelineClips[sceneCounter].repeat);
-    timelineClips[sceneCounter].playActions();
-    sceneCounter++;
+function initLayers() {
+    sphereMesh.layers.enableAll();
+    boxMesh.layers.set(1);
+    camera.layers.set(0);
+}
+
+function playScene(sceneObj) {
+    console.log(`active scene: ${sceneObj.name}`);
+    console.log(sceneObj);
+
+    gsapT1.repeat(sceneObj.repeat);
+    sceneObj.playActions();
 }
 
 //#endregion
