@@ -11,6 +11,8 @@ import { SelectiveBloomEffect, BloomEffect, EffectComposer, EffectPass, RenderPa
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
  */
+import { gsap } from 'gsap/all';
+
 
 
 // Debug
@@ -48,35 +50,35 @@ let uniforms = {
  */
 
 // init objects
-const bloomLayer = new THREE.Layers();
-bloomLayer.set(1);
+//const bloomLayer = new THREE.Layers();
 
 let effectComposer, renderPass, bloomPass;
-const bloomParams = {
-    exposure: 1,
-    bloomStrength: 1.5,
-    bloomThreshold: 0,
-    bloomRadius: 0
-};
 
 let autoscroll = true;
 let boyAnimations, settings;
-let boxMesh, sphereMesh, sunMesh, skydomeMesh, sceneModel;
+let boxMesh, sphereMesh;
 let boyMixer1, skeleton, boyModel, duneModel;
-let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
+let activeClip;
 
-let timelineCounter;
-function timelineObj(enter, executed, clip) {
+let sceneCounter = 0;
+/* function timelineObj(enter, executed, clip) {
     this.enter = enter;
     this.executed = executed;
     this.clip = clip;
+} */
+function timelineObj(name, repeat, playActions) {
+    this.name = name;
+    this.repeat = repeat;
+    this.playActions = playActions;
+
 }
-const timeline = [];
+const timelineClips = [];
+let gsapT1 = gsap.timeline(/* { repeat: -1 } */);
 
 let wheelDeltaY, wheelTotalY, controls, camera, renderer;
 let scrollControl = { scrollspeed: 1 };
 let htmlBody = document.querySelector("html");
-let mixerLoaded = false;
+let meshLoaded = false;
 
 /**
  * INIT OJBECTS
@@ -96,14 +98,11 @@ function initObjects() {
     checkTxt.wrapT = THREE.RepeatWrapping;
     checkTxt.repeat.set(10, 10);
     checkTxt.magFilter = THREE.NearestFilter;
-    const skyTxt = txtLoader.load(`skydome.jpg`);
-    const duneBaseTxt = txtLoader.load(`duneMat_baseColor.png`);
-    const duneMetalTxt = txtLoader.load(`duneMat_metallicMap.png`);
     //#endregion
 
     //#region MATERIALS
-    const redMat = new THREE.MeshBasicMaterial();
-    redMat.color = new THREE.Color(0xff0000);
+    const whiteMat = new THREE.MeshBasicMaterial();
+    whiteMat.color = new THREE.Color(0xfefefe);
 
     const phongMat = new THREE.MeshPhongMaterial({
         color: 0xffffff,
@@ -115,33 +114,15 @@ function initObjects() {
         side: THREE.DoubleSide
     })
 
-    const skyMat = new THREE.MeshBasicMaterial({
-        map: skyTxt,
-        //emissive: 0xffffff,
-        //emissiveMap: skyTxt,
-        //emissiveIntensity: 5,
-        side: THREE.BackSide
-    });
-
-    const duneMat = new THREE.MeshStandardMaterial({
-        map: duneBaseTxt,
-        roughnessMap: duneMetalTxt,
-        metalness: .5,
-        metalnessMap: duneMetalTxt
-    });
-
     const glowMat = new THREE.MeshStandardMaterial({
-        emissive: 0xffffff,
-        emissiveIntensity: 10,
+        color: 0xffffff,
+        //emissive: 0xffffff,
+        //emissiveIntensity: 10,
         transparent: false
-
-        /* color: new THREE.Color(1, 1, 1),
-        emissiveIntensity: 1,
-        emissive: new THREE.Color(1, 0, 0), */
-
     });
 
     // Shader Materials
+    //#region SHADERMATS
     const shaderMat = new THREE.ShaderMaterial({
         uniforms: uniforms,
         vertexShader: document.getElementById('vertexShader').textContent,
@@ -167,139 +148,22 @@ function initObjects() {
     });
     //#endregion
 
+    //#endregion
+
     //#region MESH
 
-    boxMesh = new THREE.Mesh(boxGeo, glowMat);
-    boxMesh.position.y = .15;
-    boxMesh.position.x = .15;
-    boxMesh.castShadow = true;
-    boxMesh.receiveShadow = true;
-    scene.add(boxMesh);
-
-    sphereMesh = new THREE.Mesh(sphereGeo, shaderMat);
+    sphereMesh = new THREE.Mesh(sphereGeo, glowMat);
     sphereMesh.scale.set(1.5, 1.5, 1.5);
-    sphereMesh.position.x = -1.25;
-    sphereMesh.position.z = -1.25;
+    sphereMesh.position.set(0, 0, 0);
     scene.add(sphereMesh);
-
-    sunMesh = new THREE.Mesh(circleGeo, phongMat);
-    sunMesh.position.z = -3;
-    sunMesh.position.x = 1;
-    sunMesh.position.y = 1;
-    scene.add(sunMesh);
-
-    skydomeMesh = new THREE.Mesh(sphereGeo, skyMat);
-    skydomeMesh.scale.set(50, 50, 50);
-    //skydomeMesh.castShadow = true;
-    scene.add(skydomeMesh);
 
     //#endregion
 
     //#region GLTF
 
-    /**
-     * LOAD DUNE GLTF 
-     */
-    gltfLoader.load(`dunes_v15.gltf`, (gltf) => {
-        duneModel = gltf.scene;
-
-        //set transforms
-        duneModel.scale.set(.1, .1, .1);
-
-        // assign cast shadow
-        duneModel.traverse(function (object) {
-            if (object.isMesh) {
-                //object.castShadow = true;
-                object.receiveShadow = true;
-                //console.log("object name: " + object.name)
-
-                if (object.name.includes("Dunes")) {
-                    //console.log("object name: " + object.name)
-                    object.material = duneMat;
-                }
-            }
-        });
-        // add model to scene
-        scene.add(duneModel);
-    });
-
-    /**
-     * LOAD BOY GLTF 
-     */
-    gltfLoader.load(`boy_v15.gltf`, (gltf) => {
-        boyModel = gltf.scene;
-
-        //set transforms
-        boyModel.scale.set(.1, .1, .1);
-
-        // assign cast shadow
-        boyModel.traverse(function (object) {
-            if (object.isMesh) {
-                //object.castShadow = true;
-                //object.receiveShadow = true;
-                //console.log("object name: " + object.name)
-                //object.material = txtMat;
-            }
-        });
-
-        // add BOY to scene
-        scene.add(boyModel);
-
-        // show rig skeleton
-        skeleton = new THREE.SkeletonHelper(boyModel);
-        skeleton.visible = true;
-        scene.add(skeleton);
-
-        // init animation mixer
-        boyMixer1 = new THREE.AnimationMixer(boyModel);
-        //console.log("anim leng: " + gltf.animations.length);
-
-        //boyMixer1.clipAction(gltf.animations[0]).play();
-        //console.log(boyMixer1.clipAction(gltf.animations[0]));
-        boyAnimations = gltf.animations;
-
-        movePos1_NLA = boyMixer1.clipAction(gltf.animations[0]);
-        pole_walking_NLA = boyMixer1.clipAction(gltf.animations[1]);
-        sitting_NLA = boyMixer1.clipAction(gltf.animations[2]);
-        start_walking_NLA = boyMixer1.clipAction(gltf.animations[3]);
-        walk_cycle_NLA = boyMixer1.clipAction(gltf.animations[4]);
-
-        activeClip = walk_cycle_NLA;
-        activeClip.play();
-        //walk_cycle_NLA.play();
-        //activeClip.setEffectiveWeight(0);
-        //boyMixer1.clipAction(movePos1_NLA).play();
-
-        //boyMixer1.clipAction(gltf.animations[3]).setEffectiveWeight(0);
-
-        console.log(boyAnimations);
-        console.log(activeClip);
-        //gui.add(duneModel.position, "y").min(-20).max(5);
-        const folder1 = gui.addFolder('boy controls');
-
-        settings = {
-            'sit down': function () { switchAnims(sitting_NLA) },
-            'walk cycle': function () { switchAnims(walk_cycle_NLA) },
-            'move position 1': function () { switchAnims(movePos1_NLA) },
-            'pole walking': function () { switchAnims(pole_walking_NLA) },
-            'start walking': function () { switchAnims(start_walking_NLA) }
-        }
-        folder1.add(settings, 'sit down');
-        folder1.add(settings, 'walk cycle');
-        folder1.add(settings, 'move position 1');
-        folder1.add(settings, 'pole walking');
-        folder1.add(settings, 'start walking');
-
-        initTimeline(boyAnimations);
-    });
     //#endregion
 
     //#region LIGHTS
-    /* const pointLight = new THREE.PointLight(0xffffff, 1)
-    //pointLight.position.set(2, 3, 4);
-    pointLight.position.set(0.5, 1, 0);
-    pointLight.castShadow = true;
-    scene.add(pointLight); */
 
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444);
     hemiLight.position.set(0, 20, 0);
@@ -316,11 +180,8 @@ function initObjects() {
     dirLight.shadow.camera.right = 2;
     dirLight.shadow.camera.near = 0.1;
     dirLight.shadow.camera.far = 40;
-    dirLight.target = boxMesh;
-    scene.add(dirLight);
     scene.add(new THREE.CameraHelper(dirLight.shadow.camera));
     //#endregion
-
 }
 function switchAnims(newClip) {
     console.log(newClip);
@@ -363,17 +224,14 @@ function initScene() {
     /**
      * Mouse Wheel Event
      */
-    new function normalizeWheel(val, min, max) {
-        return (val - min) / (max - min);
-    }
 
-    wheelTotalY = 0;
+    /* wheelTotalY = 0;
     window.addEventListener("wheel", event => {
         wheelDeltaY = event.deltaY;
         wheelTotalY += wheelDeltaY;
-        console.log(wheelDeltaY);
+        //console.log(wheelDeltaY);
         //console.log("total Y: " + wheelTotalY);
-    });
+    }); */
     //#endregion
 
     /**
@@ -412,14 +270,13 @@ function initScene() {
 
     //bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.95);
     bloomPass = new BloomEffect({
-        intensity: 10,
-        luminanceThreshold: .95
+        intensity: 2,
+        luminanceThreshold: .5
     })
     const effectPass = new EffectPass(
         camera,
         bloomPass
     );
-    //effectPass.intensity(1);
 
     effectComposer.addPass(renderPass);
     //effectComposer.addPass(bloomPass);
@@ -429,54 +286,74 @@ function initScene() {
     //#endregion
 
     // Load GUI Items
-    gui.add({ scroll: autoscroll }, "scroll").name("scroll").onChange(function () {
-        if (autoscroll) { console.log("no autoscroll") }
-        autoscroll = !autoscroll;
-    });
-
-    gui.add(scrollControl, "scrollspeed", -5, 5).name("scrollspeed").onChange(function () {
-        console.log("change" + scrollControl.scrollspeed);
-    });
-
-    // THREE UNREAL BLOOM
-    /* const folder2 = gui.addFolder('bloom controls');
-    folder2.add(bloomParams, 'exposure', 0.1, 2).onChange(function (value) {
-        renderer.toneMappingExposure = Math.pow(value, 4.0);
-    });
-    folder2.add(bloomParams, 'bloomThreshold', 0.0, 1.0).onChange(function (value) {
-        bloomPass.threshold = Number(value);
-    });
-    folder2.add(bloomParams, 'bloomStrength', 0.0, 3.0).onChange(function (value) {
-        bloomPass.strength = Number(value);
-    });
-    folder2.add(bloomParams, 'bloomRadius', 0.0, 1.0).step(0.01).onChange(function (value) {
-        bloomPass.radius = Number(value);
-    }); */
 
 }
+
 
 /**
  * INIT TIMELINE
  */
-function initTimeline(animations) {
-    let sitClip, walkClip, moveClip;
-    sitClip = new timelineObj(.03, false, boyMixer1.clipAction(animations[2]));
-    walkClip = new timelineObj(.08, false, boyMixer1.clipAction(animations[4]));
 
-    timeline.push(sitClip, walkClip,
-        new timelineObj(.11, false, boyMixer1.clipAction(animations[1])),
-        new timelineObj(.14, false, boyMixer1.clipAction(animations[3])))
-    console.log(timeline);
+//#region GSAP ANIMS
+function initTimeline() {
+    timelineClips.push(
+        new timelineObj(
+            'move sphere by x', -1,
+            function () {
+                gsapT1.clear();
+                gsapT1.to(sphereMesh.position, { duration: 1, x: 1 });
+                gsapT1.to(sphereMesh.position, { duration: 1, x: sphereMesh.position.x });
+            }
+        ),
+        new timelineObj(
+            'move sphere by x', -1,
+            function () {
+                gsapT1.clear();
+                gsapT1.to(sphereMesh.position, { duration: 1, y: 1 });
+                gsapT1.to(sphereMesh.position, { duration: 1, y: sphereMesh.position.y });
+            }
+        ),
+    );
+
+    // load GUI items
+
+    //toggle the GSAP timeline
+    let playing = true;
+    gui.add({ button: playing }, "button").name("play/pause").onChange(function () {
+        if (playing) {
+            gsapT1.pause();
+        } else {
+            gsapT1.play();
+        }
+        playing = !playing;
+    });
+
+    // continue to next scene
+    gui.add({
+        nextScene: function () {
+            console.log(`active scene: ${sceneCounter}`);
+            console.log(timelineClips[sceneCounter]);
+            gsapT1.repeat(timelineClips[sceneCounter].repeat);
+            timelineClips[sceneCounter].playActions();
+            sceneCounter++;
+        }
+    }, 'nextScene');
 }
+
+function advanceScene() {
+    console.log(`active scene: ${sceneCounter}`);
+    console.log(timelineClips[sceneCounter]);
+    gsapT1.repeat(timelineClips[sceneCounter].repeat);
+    timelineClips[sceneCounter].playActions();
+    sceneCounter++;
+}
+
+//#endregion
+
 
 /**
  * Animate
  */
-
-console.log(htmlBody.scrollHeight);
-console.log(window.innerHeight);
-
-let i = 0;
 
 const tick = () => {
 
@@ -484,61 +361,24 @@ const tick = () => {
 
     stats.begin()
 
-    if ((htmlBody.scrollTop <= (htmlBody.scrollHeight - window.innerHeight - 10)) && (autoscroll)) {
-        htmlBody.scrollTop += scrollControl.scrollspeed;
-        //console.log(htmlBody.scrollTop);
-    } else if (autoscroll) {
-        htmlBody.scrollTop = 0;
-        //console.log("scrolltop bottom " + htmlBody.scrollTop);
-    }
-
     // Update Uniforms
     uniforms['time'].value = performance.now() / 1000;
     uniforms['resolution'].value = [window.innerWidth, window.innerHeight];
 
     // Update objects
-    boxMesh.rotation.x = (htmlBody.scrollTop / 100);
-    boxMesh.rotation.y = (htmlBody.scrollTop / 100);
+    //sphereMesh.position.x = Math.sin(clock.getElapsedTime());
 
-    //#endregion
-
-    //#region LOADED
-
-    //only execute if mixer is loaded
-    if (!mixerLoaded) {
-        if (boyMixer1) {
-            mixerLoaded = true;
-            console.log("mixer loaded");
-        }
-    } else {
-        // Update animation timing
-        {
-            let t = (htmlBody.scrollTop / 200);
-            boyMixer1.setTime(t);
-            //console.log("custom time: " + t);
-        }
-
-        //console.log(Math.ceil(htmlBody.scrollTop / 10) * 10);
-        //console.log(`sit key: ${key_sit}`);
-        //console.log(`sit key: ${key_stand}`);
-        {
-            if (i < timeline.length) {
-                let t = Math.ceil(htmlBody.scrollTop / 10) * 10;
-                let key = Math.ceil(((htmlBody.scrollHeight * timeline[i].enter) / 10)) * 10;
-                //console.log(t);
-
-                if (!timeline[i].executed && key == t) {
-                    //console.log(timeline[i]);
-                    //checkTimeline(Math.ceil(htmlBody.scrollTop / 10) * 10);
-                    //console.log(timeline[i].clip);
-                    switchAnims(timeline[i].clip);
-                    timeline[i].executed = true;
-                    i++;
-                }
-            }
+    // init GSAP only when models are loaded
+    if (!meshLoaded) {
+        if (sphereMesh) {
+            initTimeline();
+            meshLoaded = true;
         }
     }
+
     //#endregion
+
+
 
     // Update stats
     stats.update();
@@ -560,5 +400,4 @@ const tick = () => {
 
 initObjects();
 initScene();
-//initTimeline();
 tick();
