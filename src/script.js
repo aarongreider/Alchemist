@@ -4,13 +4,13 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'dat.gui'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { AnimationMixer, BlendingSrcFactor, DstAlphaFactor, OneFactor, PCFShadowMap, SkeletonHelper, SrcAlphaFactor } from 'three'
+import { AnimationMixer, BlendingSrcFactor, DstAlphaFactor, OneFactor, PCFShadowMap, SkeletonHelper, SrcAlphaFactor, SubtractEquation } from 'three'
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-//import { BloomEffect, EffectComposer, EffectPass, RenderPass } from "postprocessing";
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { SelectiveBloomEffect, BloomEffect, EffectComposer, EffectPass, RenderPass } from "postprocessing";
+/* import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-
+ */
 
 
 // Debug
@@ -336,7 +336,7 @@ function switchAnims(newClip) {
  * INIT SCENE
  */
 function initScene() {
-
+    //#region LISTENERS/SIZE
     /**
      * Sizes
      */
@@ -374,11 +374,11 @@ function initScene() {
         console.log(wheelDeltaY);
         //console.log("total Y: " + wheelTotalY);
     });
+    //#endregion
 
     /**
      * Camera
      */
-    // Base camera
     camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
     camera.position.x = 0
     camera.position.y = 0
@@ -410,10 +410,20 @@ function initScene() {
     effectComposer = new EffectComposer(renderer);
     renderPass = new RenderPass(scene, camera);
 
-    bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.95);
+    //bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.95);
+    bloomPass = new BloomEffect({
+        intensity: 10,
+        luminanceThreshold: .95
+    })
+    const effectPass = new EffectPass(
+        camera,
+        bloomPass
+    );
+    //effectPass.intensity(1);
 
     effectComposer.addPass(renderPass);
-    effectComposer.addPass(bloomPass);
+    //effectComposer.addPass(bloomPass);
+    effectComposer.addPass(effectPass);
 
 
     //#endregion
@@ -427,7 +437,9 @@ function initScene() {
     gui.add(scrollControl, "scrollspeed", -5, 5).name("scrollspeed").onChange(function () {
         console.log("change" + scrollControl.scrollspeed);
     });
-    const folder2 = gui.addFolder('bloom controls');
+
+    // THREE UNREAL BLOOM
+    /* const folder2 = gui.addFolder('bloom controls');
     folder2.add(bloomParams, 'exposure', 0.1, 2).onChange(function (value) {
         renderer.toneMappingExposure = Math.pow(value, 4.0);
     });
@@ -439,7 +451,7 @@ function initScene() {
     });
     folder2.add(bloomParams, 'bloomRadius', 0.0, 1.0).step(0.01).onChange(function (value) {
         bloomPass.radius = Number(value);
-    });
+    }); */
 
 }
 
