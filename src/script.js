@@ -66,11 +66,11 @@ let activeSceneNum = 0;
     this.executed = executed;
     this.clip = clip;
 } */
-function timelineObj(name, repeat, playActions) {
+function timelineObj(name, repeat, actors, playActions) {
     this.name = name;
     this.repeat = repeat;
+    this.actors = actors;
     this.playActions = playActions;
-
 }
 const timelineClips = [];
 let gsapT1 = gsap.timeline(/* { repeat: -1 } */);
@@ -172,10 +172,11 @@ function initObjects() {
 
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444);
     hemiLight.position.set(0, 20, 0);
+    hemiLight.layers.enableAll();
     scene.add(hemiLight);
 
 
-    const dirLight = new THREE.DirectionalLight(0xffffff);
+    /* const dirLight = new THREE.DirectionalLight(0xffffff);
     dirLight.position.set(3, 10, 10);
     dirLight.intensity = .5;
     dirLight.castShadow = true;
@@ -185,7 +186,9 @@ function initObjects() {
     dirLight.shadow.camera.right = 2;
     dirLight.shadow.camera.near = 0.1;
     dirLight.shadow.camera.far = 40;
-    scene.add(new THREE.CameraHelper(dirLight.shadow.camera));
+    dirLight.layers.enableAll();
+    //scene.add(new THREE.CameraHelper(dirLight.shadow.camera));
+    scene.add(dirLight); */
     //#endregion
 }
 function switchGLTFAnims(newClip) {
@@ -304,6 +307,7 @@ function initTimeline() {
     timelineClips.push(
         new timelineObj(
             'move sphere by x', -1,
+            [sphereMesh],
             function () {
                 gsapT1.clear();
                 gsapT1.to(sphereMesh.position, { duration: 1, x: sphereMesh.position.x + 1 });
@@ -312,6 +316,7 @@ function initTimeline() {
         ),
         new timelineObj(
             'move sphere by y', -1,
+            [boxMesh, sphereMesh],
             function () {
                 gsapT1.clear();
                 gsapT1.to(sphereMesh.position, { duration: 1, y: sphereMesh.position.y + 1 });
@@ -319,16 +324,17 @@ function initTimeline() {
             }
         ),
         new timelineObj(
-            'move sphere by z', -1,
+            'rotate box by z', -1,
+            [boxMesh],
             function () {
                 gsapT1.clear();
-                gsapT1.to(sphereMesh.position, { duration: 1, z: sphereMesh.position.z + 1 });
-                gsapT1.to(sphereMesh.position, { duration: 1, z: sphereMesh.position.z });
+                gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z + 6 });
+                gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z });
             }
         ),
     );
     initLayers();
-    playScene(timelineClips[activeSceneNum]);
+    playScene(timelineClips[activeSceneNum], activeSceneNum);
 
     // load GUI items
 
@@ -346,28 +352,42 @@ function initTimeline() {
     // continue to next scene
     gui.add({
         nextScene: function () {
-            console.log(`timelineClips length ${timelineClips.length}`)
+            //console.log(`timelineClips length ${timelineClips.length}`)
             if (activeSceneNum < timelineClips.length - 1) {
                 activeSceneNum++;
-                playScene(timelineClips[activeSceneNum])
+                playScene(timelineClips[activeSceneNum], activeSceneNum)
             } else {
                 activeSceneNum = 0;
-                playScene(timelineClips[activeSceneNum])
+                playScene(timelineClips[activeSceneNum], activeSceneNum)
             }
         }
     }, 'nextScene');
 }
 
 function initLayers() {
-    sphereMesh.layers.enableAll();
-    boxMesh.layers.set(1);
-    camera.layers.set(0);
+    scene.traverse(child => {
+        if (child instanceof THREE.Mesh) {
+            child.layers.disableAll();
+        }
+    });
 }
 
-function playScene(sceneObj) {
-    console.log(`active scene: ${sceneObj.name}`);
-    console.log(sceneObj);
+function assignLayers(sceneObj, layerNum) {
+    // set layer actors
+    for (let i = 0; i < sceneObj.actors.length; i++) {
+        sceneObj.actors[i].layers.set(layerNum);
+        console.log(sceneObj.actors[i]);
+    }
+    camera.layers.set(layerNum);
+}
 
+function playScene(sceneObj, layerNum) {
+    console.log(`active scene: ${layerNum} ${sceneObj.name}`);
+    //console.log(sceneObj);
+
+    assignLayers(sceneObj, layerNum);
+
+    // play animations
     gsapT1.repeat(sceneObj.repeat);
     sceneObj.playActions();
 }
