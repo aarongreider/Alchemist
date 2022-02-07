@@ -1,3 +1,18 @@
+@font-face {
+    font-family: 'neacademia_display_trialIt';
+    src: url('neacademiadisplaytrial-it-webfont.woff2') format('woff2'),
+         url('neacademiadisplaytrial-it-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'neacademia_display_trialRg';
+    src: url('neacademiadisplaytrial-rg-webfont.woff2') format('woff2'),
+         url('neacademiadisplaytrial-rg-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
 *
 {
     margin: 0;
@@ -6,7 +21,7 @@
     overflow-x: hidden;
     overflow-y: scroll; */
 }
-
+ 
 html,
 body
 {
@@ -26,13 +41,36 @@ body
 #canvasContainer {
     z-index: -5;
 }
-h1 {
-    font-size: 1rem;
-    z-index: 5;
-    color: whitesmoke;
+
+.narrator {
+    height: 90vh;
+    width: 100vw;
+    
+    position: absolute;
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: flex-end;
+    align-items: center;
 }
 
-.h1Container {
+.narrator p {
+    font-family: 'neacademia_display_trialRg';
+    font-size: 1.5rem;
+    text-align: center;
+    color: whitesmoke;
+        
     position: absolute;
-    width: 40vw;
+    z-index: 5;
+
+    min-width: 30rem;
+    max-width: 40rem;
+    width: 60vw;
+}
+
+p i {
+    font-family: 'neacademia_display_trialIt';
+}
+
+.allNarration {
+    display: none;
 }

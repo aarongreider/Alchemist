@@ -58,14 +58,14 @@ let autoscroll = true;
 let boyAnimations, settings;
 let boxMesh, sphereMesh;
 let boyMixer1, skeleton, boyModel, duneModel;
-let activeClip;
+let activeClip, allNarration, activeSceneNum = 0;
 
-let activeSceneNum = 0;
 /* function timelineObj(enter, executed, clip) {
     this.enter = enter;
     this.executed = executed;
     this.clip = clip;
 } */
+
 function timelineObj(name, repeat, actors, playActions) {
     this.name = name;
     this.repeat = repeat;
@@ -74,6 +74,7 @@ function timelineObj(name, repeat, actors, playActions) {
 }
 const timelineClips = [];
 let gsapT1 = gsap.timeline(/* { repeat: -1 } */);
+let gsapT2 = gsap.timeline({ repeat: 0 });
 
 let wheelDeltaY, wheelTotalY, controls, camera, renderer;
 let scrollControl = { scrollspeed: 1 };
@@ -118,7 +119,7 @@ function initObjects() {
         color: 0xffffff,
         //emissive: 0xffffff,
         //emissiveIntensity: 10,
-        transparent: false
+        transparent: true,
     });
 
     // Shader Materials
@@ -297,6 +298,69 @@ function initScene() {
 
 }
 
+/**
+ * HTML FUNCTIONS
+ */
+
+//#region NARRATOR
+function initNarration() {
+    //get array of all narration, get narrator, swap allNarration[i] with narrator on timer
+
+    allNarration = document.querySelectorAll(".allNarration p");
+    /* allNarration.forEach(narration => {
+        console.log(narration.innerHTML);
+    }); */
+    swapNarration(allNarration[activeSceneNum].innerHTML);
+}
+
+function swapNarration(newText) {
+    //get timeline2, clear t2, fade out and then in narration over duration .5s
+
+    let narration = document.querySelector(".narrator p");
+    //console.log(`${newText.includes('span') ? 'has' : 'does not have'} span`);
+
+    let spans = spliceString(newText, '<span>');
+    if (!spans) {
+        //if spans is not found
+        gsapT2.to(narration, { duration: .5, opacity: 0 });
+        gsapT2.call(function () { narration.innerHTML = newText });
+        gsapT2.to(narration, { duration: .75, opacity: 1 });
+    } else {
+        //if spans[] is returned
+        spans.forEach(span => {
+            gsapT2.to(narration, { duration: .5, opacity: 0 });
+            gsapT2.call(function () { narration.innerHTML = span });
+            gsapT2.to(narration, { duration: .75, opacity: 1 });
+            /** call redundant timeline function for a forced wait time, 
+             * duration ( number of characters / 25 ) * 1.25 
+             */
+            gsapT2.to(narration, { duration: (span.length / 25) * 1.25, opacity: 1 });
+        });
+    }
+}
+
+function spliceString(str, substr) {
+    let flag = false;
+    let indexes = [];
+    let spans = [];
+
+    // get index of all spans
+    for (let i = 0; i < str.length - substr.length + 1; i++) {
+        if (str.substring(i, substr.length + i) == substr) {
+            console.log(i + " ");
+            indexes.push(i);
+            flag = true;
+        }
+    }
+    //split string into substrings
+    for (let i = 0; i < indexes.length; i++) {
+        spans.push(str.slice(indexes[i], indexes[i + 1]));
+    };
+    //console.log(spans);
+
+    return (flag ? spans : false);
+}
+//#endregion
 
 /**
  * INIT TIMELINE
@@ -304,6 +368,7 @@ function initScene() {
 
 //#region GSAP ANIMS
 function initTimeline() {
+    //#region TIMELINE OBJs
     timelineClips.push(
         new timelineObj(
             'move sphere by x', -1,
@@ -315,7 +380,7 @@ function initTimeline() {
             }
         ),
         new timelineObj(
-            'move sphere by y', -1,
+            'move sphere by y', 1,
             [boxMesh, sphereMesh],
             function () {
                 gsapT1.clear();
@@ -333,11 +398,13 @@ function initTimeline() {
             }
         ),
     );
+    //#endregion
+
+    initNarration();
     initLayers();
     playScene(timelineClips[activeSceneNum], activeSceneNum);
 
-    // load GUI items
-
+    //#region TL GUI
     //toggle the GSAP timeline
     let playing = true;
     gui.add({ button: playing }, "button").name("play/pause").onChange(function () {
@@ -355,14 +422,20 @@ function initTimeline() {
             //console.log(`timelineClips length ${timelineClips.length}`)
             if (activeSceneNum < timelineClips.length - 1) {
                 activeSceneNum++;
+                swapNarration(allNarration[activeSceneNum].innerHTML);
+                fadeMesh();
                 playScene(timelineClips[activeSceneNum], activeSceneNum)
             } else {
                 activeSceneNum = 0;
+                swapNarration(allNarration[activeSceneNum].innerHTML);
                 playScene(timelineClips[activeSceneNum], activeSceneNum)
             }
         }
     }, 'nextScene');
+    //#endregion
 }
+
+
 
 function initLayers() {
     scene.traverse(child => {
@@ -376,7 +449,7 @@ function assignLayers(sceneObj, layerNum) {
     // set layer actors
     for (let i = 0; i < sceneObj.actors.length; i++) {
         sceneObj.actors[i].layers.set(layerNum);
-        console.log(sceneObj.actors[i]);
+        //console.log(sceneObj.actors[i]);
     }
     camera.layers.set(layerNum);
 }
@@ -387,9 +460,20 @@ function playScene(sceneObj, layerNum) {
 
     assignLayers(sceneObj, layerNum);
 
-    // play animations
+    // set repeat and play animations
     gsapT1.repeat(sceneObj.repeat);
     sceneObj.playActions();
+}
+
+function fadeMesh() {
+    scene.traverse(child => {
+        if (child.material) {
+            //child.material.opacity = 0;
+            gsapT2.to(child.material, { duration: 1, opacity: 1 });
+            gsapT2.to(child.material, { duration: 1, opacity: 0 });
+            //gsapT2.to(child.material, { duration: 1, opacity: 1 });
+        }
+    });
 }
 
 //#endregion
