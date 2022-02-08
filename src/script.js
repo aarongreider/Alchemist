@@ -60,12 +60,14 @@ cursor.addEventListener("click", advanceScene);
 
 let effectComposer, renderPass, bloomPass;
 
-let autoscroll = true;
 let boyAnimations, settings;
 let mats = [];
+let gltfModels = [];
+
 let boxMesh, sphereMesh;
 let boyMixer1, skeleton, boyModel, duneModel;
-let activeClip, allNarration, activeSceneNum = 0;
+let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
+let allNarration, activeSceneNum = 0;
 
 /* function timelineObj(enter, executed, clip) {
     this.enter = enter;
@@ -89,10 +91,8 @@ let gsapT3 = gsap.timeline();
 gsapT2.repeat(0);
 gsapT3.repeat(0);
 
-let wheelDeltaY, wheelTotalY, controls, camera, renderer;
-let scrollControl = { scrollspeed: 1 };
-let htmlBody = document.querySelector("html");
-let meshLoaded = false;
+let controls, camera, renderer;
+let meshLoaded = false, mixerLoaded = false;
 
 /**
  * INIT OJBECTS
@@ -169,8 +169,8 @@ function initObjects() {
     //#region MESH
 
     sphereMesh = new THREE.Mesh(sphereGeo, glowMat);
-    sphereMesh.scale.set(1.5, 1.5, 1.5);
-    sphereMesh.position.set(0, 0, 0);
+    sphereMesh.scale.set(1, 1, 1);
+    sphereMesh.position.set(.5, -1, -2);
     scene.add(sphereMesh);
 
     boxMesh = new THREE.Mesh(boxGeo, glowMat);
@@ -182,6 +182,68 @@ function initObjects() {
 
     //#region GLTF
 
+    /**
+    * LOAD BOY GLTF
+    */
+    gltfLoader.load(`boy_v15.gltf`, (gltf) => {
+        boyModel = gltf.scene;
+
+        //set transforms
+        boyModel.scale.set(.1, .1, .1);
+
+        // assign cast shadow and materials
+        /* boyModel.traverse(function (child) {
+            if (child.isMesh) {
+                //object.castShadow = true;
+                //object.receiveShadow = true;
+                //console.log("object name: " + object.name)
+                child.material = glowMat;
+            }
+        }); */
+
+        // add BOY to scene
+        gltfModels.push(boyModel);
+        scene.add(boyModel);
+        console.log(boyModel)
+        console.log(gltfModels)
+
+        // show rig skeleton
+        skeleton = new THREE.SkeletonHelper(boyModel);
+        skeleton.visible = true;
+        //scene.add(skeleton);
+
+        // init animation mixer
+        boyMixer1 = new THREE.AnimationMixer(boyModel);
+        boyAnimations = gltf.animations;
+
+        movePos1_NLA = boyMixer1.clipAction(gltf.animations[0]);
+        pole_walking_NLA = boyMixer1.clipAction(gltf.animations[1]);
+        sitting_NLA = boyMixer1.clipAction(gltf.animations[2]);
+        start_walking_NLA = boyMixer1.clipAction(gltf.animations[3]);
+        walk_cycle_NLA = boyMixer1.clipAction(gltf.animations[4]);
+
+        activeClip = walk_cycle_NLA;
+        activeClip.play();
+
+        //#region BOY GUI
+        const folder1 = gui.addFolder('boy controls');
+
+        settings = {
+            'sit down': function () { switchGLTFAnims(sitting_NLA) },
+            'walk cycle': function () { switchGLTFAnims(walk_cycle_NLA) },
+            'move position 1': function () { switchGLTFAnims(movePos1_NLA) },
+            'pole walking': function () { switchGLTFAnims(pole_walking_NLA) },
+            'start walking': function () { switchGLTFAnims(start_walking_NLA) }
+        }
+        folder1.add(settings, 'sit down');
+        folder1.add(settings, 'walk cycle');
+        folder1.add(settings, 'move position 1');
+        folder1.add(settings, 'pole walking');
+        folder1.add(settings, 'start walking');
+
+        //#endregion
+        //initTimeline(boyAnimations);
+    });
     //#endregion
 
     //#region LIGHTS
@@ -191,20 +253,6 @@ function initObjects() {
     hemiLight.layers.enableAll();
     scene.add(hemiLight);
 
-
-    /* const dirLight = new THREE.DirectionalLight(0xffffff);
-    dirLight.position.set(3, 10, 10);
-    dirLight.intensity = .5;
-    dirLight.castShadow = true;
-    dirLight.shadow.camera.top = 2;
-    dirLight.shadow.camera.bottom = - 2;
-    dirLight.shadow.camera.left = - 2;
-    dirLight.shadow.camera.right = 2;
-    dirLight.shadow.camera.near = 0.1;
-    dirLight.shadow.camera.far = 40;
-    dirLight.layers.enableAll();
-    //scene.add(new THREE.CameraHelper(dirLight.shadow.camera));
-    scene.add(dirLight); */
     //#endregion
 }
 function switchGLTFAnims(newClip) {
@@ -212,7 +260,7 @@ function switchGLTFAnims(newClip) {
     newClip.enabled = true;
     newClip.setEffectiveWeight(1);
     newClip.play();
-    activeClip.crossFadeTo(newClip, .25, false);
+    activeClip.crossFadeTo(newClip, .5, false);
 
     activeClip = newClip;
 }
@@ -245,17 +293,6 @@ function initScene() {
         //effectComposer.setSize(sizes.width, sizes.height)
     })
 
-    /**
-     * Mouse Wheel Event
-     */
-
-    /* wheelTotalY = 0;
-    window.addEventListener("wheel", event => {
-        wheelDeltaY = event.deltaY;
-        wheelTotalY += wheelDeltaY;
-        //console.log(wheelDeltaY);
-        //console.log("total Y: " + wheelTotalY);
-    }); */
     //#endregion
 
     /**
@@ -323,24 +360,30 @@ function initTimeline() {
     timelineClips.push(
         new timelineObj(
             'move sphere by x', -1,
-            [sphereMesh],
+            [sphereMesh, boyModel],
             function () {
                 gsapT1.clear();
+                gsapT1.call(function () {
+                    if (activeClip != sitting_NLA) { switchGLTFAnims(sitting_NLA) }
+                })
                 gsapT1.to(sphereMesh.position, { duration: 1, x: sphereMesh.position.x + 1 });
                 gsapT1.to(sphereMesh.position, { duration: 1, x: sphereMesh.position.x });
             }
         ),
         new timelineObj(
-            'move sphere by y', 1,
-            [boxMesh, sphereMesh],
+            'move sphere by y', -1,
+            [boxMesh, sphereMesh, boyModel],
             function () {
                 gsapT1.clear();
+                gsapT1.call(function () {
+                    if (activeClip != walk_cycle_NLA) { switchGLTFAnims(walk_cycle_NLA) }
+                })
                 gsapT1.to(sphereMesh.position, { duration: 1, y: sphereMesh.position.y + 1 });
                 gsapT1.to(sphereMesh.position, { duration: 1, y: sphereMesh.position.y });
             }
         ),
         new timelineObj(
-            'rotate box by z', 1,
+            'rotate box by z', -1,
             [boxMesh],
             function () {
                 gsapT1.clear();
@@ -349,10 +392,13 @@ function initTimeline() {
             }
         ),
         new timelineObj(
-            'rotate box by z', 1,
-            [boxMesh],
+            'rotate box by z', -1,
+            [boxMesh, boyModel],
             function () {
                 gsapT1.clear();
+                gsapT1.call(function () {
+                    if (activeClip != sitting_NLA) { switchGLTFAnims(sitting_NLA) }
+                })
                 gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z + 6 });
                 gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z });
             }
@@ -384,9 +430,9 @@ function initTimeline() {
     }, 'nextScene');
     //#endregion
 
-    gsapT1.timeScale(2);
+    /* gsapT1.timeScale(2);
     gsapT2.timeScale(2);
-    gsapT3.timeScale(2);
+    gsapT3.timeScale(2); */
 }
 
 function advanceScene() {
@@ -429,12 +475,12 @@ function playScene(sceneObj, layerNum) {
     gsapT3.call(function () { sceneObj.playActions() });
 
     // queue the cursor fade to t2 after t1 has completed
-    gsapT1.call(function () {
-        gsapT2.call(function () {
-            cursor.style.display = 'block'
-            console.log(`cursor to block`)
-        })
-    });
+    /* gsapT1.call(function () { */
+    gsapT2.call(function () {
+        cursor.style.display = 'block'
+        console.log(`cursor to block`)
+    })
+    /* }); */
 
     // fade in mats
     gsapT3.to(mats[0], { duration: 1, opacity: 1 });
@@ -443,8 +489,11 @@ function playScene(sceneObj, layerNum) {
 function assignLayers(sceneObj, layerNum) {
     // set layer actors
     for (let i = 0; i < sceneObj.actors.length; i++) {
-        sceneObj.actors[i].layers.set(layerNum);
         //console.log(sceneObj.actors[i]);
+        sceneObj.actors[i].traverse(function (child) {
+            child.layers.set(layerNum);
+        });
+
     }
     camera.layers.set(layerNum);
 }
@@ -496,7 +545,6 @@ function spliceString(str, substr) {
     // get index of all spans
     for (let i = 0; i < str.length - substr.length + 1; i++) {
         if (str.substring(i, substr.length + i) == substr) {
-            console.log(i + " ");
             indexes.push(i);
             flag = true;
         }
@@ -523,6 +571,7 @@ const tick = () => {
 
     stats.begin()
 
+
     // Update Uniforms
     uniforms['time'].value = performance.now() / 1000;
     uniforms['resolution'].value = [window.innerWidth, window.innerHeight];
@@ -531,11 +580,15 @@ const tick = () => {
     //sphereMesh.position.x = Math.sin(clock.getElapsedTime());
 
     // init GSAP only when models are loaded
-    if (!meshLoaded) {
-        if (sphereMesh) {
+    if (!mixerLoaded) {
+        if (boyMixer1) {
             initTimeline();
-            meshLoaded = true;
+            mixerLoaded = true;
+            console.log("mixer and timeline loaded");
         }
+    } else {
+        // Update animation timing
+        boyMixer1.setTime(clock.getElapsedTime());
     }
 
     //#endregion
