@@ -65,7 +65,7 @@ let mats = [];
 let gltfModels = [];
 
 let boxMesh, sphereMesh;
-let boyMixer1, skeleton, boyModel, duneModel;
+let boyMixer1, skeleton, boyModel, duneModel, wispModel, flowerModel;
 let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
 let allNarration, activeSceneNum = 0;
 
@@ -92,7 +92,7 @@ gsapT2.repeat(0);
 gsapT3.repeat(0);
 
 let controls, camera, renderer;
-let meshLoaded = false, mixerLoaded = false;
+let meshLoaded = false, mixerLoaded = false, isRotating = true;
 
 /**
  * INIT OJBECTS
@@ -112,6 +112,9 @@ function initObjects() {
     checkTxt.wrapT = THREE.RepeatWrapping;
     checkTxt.repeat.set(10, 10);
     checkTxt.magFilter = THREE.NearestFilter;
+
+    const wispTxt = txtLoader.load(`SandWispTxt2k.png`);
+    const wispTxtAlpha = txtLoader.load(`SandWispTxt2k_alpha.png`);
     //#endregion
 
     //#region MATERIALS
@@ -134,6 +137,26 @@ function initObjects() {
         //emissiveIntensity: 10,
         transparent: true,
     });
+
+    /*     const wispMat = new THREE.MeshStandardMaterial({
+            map: wispTxt,
+            side: THREE.DoubleSide,
+            roughnessMap: wispTxtAlpha,
+            //metalness: .5,
+            //metalnessMap: wispTxtAlpha,
+            transparent: true,
+            alphaMap: wispTxtAlpha,
+            emissive: 0xdc9d65,
+            //emissiveMap: wispTxt,
+        }); */
+
+    const wispMat = new THREE.MeshBasicMaterial({
+        map: wispTxt,
+        //color: 0xffffff,
+        side: THREE.DoubleSide,
+        alphaMap: wispTxtAlpha,
+        transparent: true,
+    })
 
     mats.push(glowMat, txtMat, phongMat, whiteMat);
 
@@ -162,6 +185,12 @@ function initObjects() {
         fragmentShader: document.getElementById('fragmentShader3').textContent,
         side: THREE.DoubleSide
     });
+
+    const wireFrontMat = new THREE.ShaderMaterial({
+        vertexShader: document.getElementById('vertexShader').textContent,
+        fragmentShader: document.getElementById('fragmentShader4').textContent,
+        side: THREE.DoubleSide,
+    });
     //#endregion
 
     //#endregion
@@ -183,8 +212,65 @@ function initObjects() {
     //#region GLTF
 
     /**
+     * LOAD WISP GLTF 
+     */
+    gltfLoader.load(`sandWisp_v1.gltf`, (gltf) => {
+        wispModel = gltf.scene;
+
+        //set transforms
+        wispModel.scale.set(2, 2, 2);
+        wispModel.position.set(-1, 0, -1);
+        //console.log(wispModel)
+
+        // assign material and shadow
+        wispModel.traverse(function (child) {
+            if (child.isMesh) {
+                //object.receiveShadow = true;
+                child.material = wispMat;
+            }
+        });
+
+        // add model to scene
+        gltfModels.push(wispModel);
+        scene.add(wispModel);
+    });
+
+    /**
+    * LOAD FLOWER GLTF 
+    */
+    gltfLoader.load(`desert_flower_v3.gltf`, (gltf) => {
+        flowerModel = gltf.scene;
+
+        //set transforms
+        flowerModel.scale.set(.1, .1, .1);
+
+        // assign material and shadow
+        flowerModel.traverse(function (child) {
+            if (child.isMesh) {
+                if (child.name.includes("flower")) {
+                    //console.log("child flower name: " + child.name);
+                    child.material = new THREE.MeshBasicMaterial({
+                        map: new THREE.TextureLoader().load("flower_diffuse.png"),
+                        side: THREE.DoubleSide,
+                    })
+                } else {
+                    child.material = new THREE.MeshPhongMaterial({
+                        wireframe: true,
+                        opacity: .5,
+                    })
+                }
+            }
+        });
+
+        // add model to scene
+        gltfModels.push(flowerModel);
+        scene.add(flowerModel);
+    });
+
+    /**
     * LOAD BOY GLTF
     */
+
     gltfLoader.load(`boy_v15.gltf`, (gltf) => {
         boyModel = gltf.scene;
 
@@ -359,15 +445,43 @@ function initTimeline() {
     //#region TIMELINE OBJs
     timelineClips.push(
         new timelineObj(
-            'move sphere by x', -1,
-            [sphereMesh, boyModel],
+            'zoom through rocks to flower', 0,
+            [flowerModel, boyModel, wispModel],
             function () {
+                //camera.rotation.x += (Math.PI / 180);
+                //camera.rotateOnWorldAxis(new THREE.Vector3(0.0, 1.0, 0.0), 3)
                 gsapT1.clear();
                 gsapT1.call(function () {
                     if (activeClip != sitting_NLA) { switchGLTFAnims(sitting_NLA) }
                 })
-                gsapT1.to(sphereMesh.position, { duration: 1, x: sphereMesh.position.x + 1 });
-                gsapT1.to(sphereMesh.position, { duration: 1, x: sphereMesh.position.x });
+
+                //initial camera pos
+                gsapT1.call(function () {
+                    let pos;
+                    flowerModel.traverse(function (child) {
+                        if (child.name.includes("flower")) {
+                            pos = child.position;
+                            camera.lookAt(pos);
+                        }
+                    })
+                });
+                //gsapT1.to(camera.rotation, { duration: .5, y: Math.PI });
+                gsapT1.to(camera.position, { duration: .5, z: -1.75 }, `<`);
+                gsapT1.to(camera.position, { duration: .5, y: .35 }, `<`);
+                gsapT1.to(camera.position, { duration: .5, x: -.75 }, `<`);
+
+                gsapT1.to(camera.position, { duration: 2, x: -.75 }); //stall for 2s
+                //gsapT1.call(function () { gsapT1.pause(); });
+
+                //to camera pos
+                gsapT1.to(camera.position, { duration: 4, z: 21.75 },);
+                gsapT1.to(camera.position, { duration: 4, x: -1.15 }, `<`);
+
+
+                /* gsapT1.call(function () {
+                    console.log('camera roation scene 1: ' + camera.rotation.y)
+                    console.log('camera position scene 1: ' + camera.position.z)
+                }) */
             }
         ),
         new timelineObj(
@@ -577,20 +691,25 @@ const tick = () => {
     uniforms['resolution'].value = [window.innerWidth, window.innerHeight];
 
     // Update objects
-    //sphereMesh.position.x = Math.sin(clock.getElapsedTime());
+    //wispModel.rotation.x = Math.sin(clock.getElapsedTime());
 
     // init GSAP only when models are loaded
     if (!mixerLoaded) {
-        if (boyMixer1) {
+        if (boyMixer1 && wispModel && flowerModel) {
             initTimeline();
             mixerLoaded = true;
+            console.log(wispModel);
             console.log("mixer and timeline loaded");
         }
     } else {
         // Update animation timing
         boyMixer1.setTime(clock.getElapsedTime());
+        wispModel.rotation.y = clock.getElapsedTime();
     }
 
+    //camera.rotation.y = clock.getElapsedTime();
+    //camera.rotation.x = clock.getElapsedTime();
+    //camera.rotation.z = clock.getElapsedTime();
     //#endregion
 
 
@@ -599,7 +718,8 @@ const tick = () => {
     stats.update();
 
     // Update Orbital Controls
-    controls.update();
+
+    if (!isRotating) { controls.update(); }
 
     // Render
     effectComposer.render();
