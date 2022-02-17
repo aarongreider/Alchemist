@@ -68,6 +68,7 @@ let boxMesh, sphereMesh;
 let boyMixer1, skeleton, boyModel, duneModel, wispModel, flowerModel;
 let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
 let allNarration, activeSceneNum = 0;
+let fadeOverride = false;
 
 /* function timelineObj(enter, executed, clip) {
     this.enter = enter;
@@ -82,14 +83,14 @@ function timelineObj(name, repeat, actors, playActions) {
     this.playActions = playActions;
 }
 const timelineClips = [];
-// T1 — handles scene/mesh animations
+// T1 — handles finite scene/mesh animations
+// T1_2 — handles repeating scene/mesh animations
 // T2 — handles text transitions
 // T3 — handles material transitions
-let gsapT1 = gsap.timeline(/* { repeat: -1 } */);
-let gsapT2 = gsap.timeline();
-let gsapT3 = gsap.timeline();
-gsapT2.repeat(0);
-gsapT3.repeat(0);
+let gsapT1 = gsap.timeline({ repeat: 0 });
+let gsapT1_2 = gsap.timeline({ repeat: -1 });
+let gsapT2 = gsap.timeline({ repeat: 0 });
+let gsapT3 = gsap.timeline({ repeat: 0 });
 
 let controls, camera, renderer;
 let meshLoaded = false, mixerLoaded = false, isRotating = true;
@@ -125,30 +126,19 @@ function initObjects() {
         color: 0xffffff,
         side: THREE.DoubleSide
     });
+    mats.push(phongMat);
 
     const txtMat = new THREE.MeshBasicMaterial({
         map: checkTxt,
         side: THREE.DoubleSide
-    })
-
-    const glowMat = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        //emissive: 0xffffff,
-        //emissiveIntensity: 10,
-        transparent: true,
     });
 
-    /*     const wispMat = new THREE.MeshStandardMaterial({
-            map: wispTxt,
-            side: THREE.DoubleSide,
-            roughnessMap: wispTxtAlpha,
-            //metalness: .5,
-            //metalnessMap: wispTxtAlpha,
-            transparent: true,
-            alphaMap: wispTxtAlpha,
-            emissive: 0xdc9d65,
-            //emissiveMap: wispTxt,
-        }); */
+    const wireMat = new THREE.MeshPhongMaterial({
+        wireframe: true,
+        opacity: .5,
+        transparent: true,
+    });
+    mats.push(wireMat);
 
     const wispMat = new THREE.MeshBasicMaterial({
         map: wispTxt,
@@ -157,8 +147,22 @@ function initObjects() {
         alphaMap: wispTxtAlpha,
         transparent: true,
     })
+    mats.push(wispMat);
 
-    mats.push(glowMat, txtMat, phongMat, whiteMat);
+    const flowerMat = new THREE.MeshBasicMaterial({
+        map: new THREE.TextureLoader().load("flower_diffuse.png"),
+        side: THREE.DoubleSide,
+        transparent: true,
+    });
+    mats.push(flowerMat);
+
+    const glowMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        //emissive: 0xffffff,
+        //emissiveIntensity: 10,
+        transparent: true,
+    });
+    mats.push(glowMat);
 
     // Shader Materials
     //#region SHADERMATS
@@ -249,15 +253,9 @@ function initObjects() {
             if (child.isMesh) {
                 if (child.name.includes("flower")) {
                     //console.log("child flower name: " + child.name);
-                    child.material = new THREE.MeshBasicMaterial({
-                        map: new THREE.TextureLoader().load("flower_diffuse.png"),
-                        side: THREE.DoubleSide,
-                    })
+                    child.material = flowerMat;
                 } else {
-                    child.material = new THREE.MeshPhongMaterial({
-                        wireframe: true,
-                        opacity: .5,
-                    })
+                    child.material = wireMat;
                 }
             }
         });
@@ -450,6 +448,7 @@ function initTimeline() {
             function () {
                 //camera.rotation.x += (Math.PI / 180);
                 //camera.rotateOnWorldAxis(new THREE.Vector3(0.0, 1.0, 0.0), 3)
+
                 gsapT1.clear();
                 gsapT1.call(function () {
                     if (activeClip != sitting_NLA) { switchGLTFAnims(sitting_NLA) }
@@ -465,40 +464,63 @@ function initTimeline() {
                         }
                     })
                 });
-                //gsapT1.to(camera.rotation, { duration: .5, y: Math.PI });
-                gsapT1.to(camera.position, { duration: .5, z: -1.75 }, `<`);
-                gsapT1.to(camera.position, { duration: .5, y: .35 }, `<`);
-                gsapT1.to(camera.position, { duration: .5, x: -.75 }, `<`);
-
+                gsapT1.to(camera.position, { duration: .1, z: -1.75 }, `<`);
+                gsapT1.to(camera.position, { duration: .1, y: .35 }, `<`);
+                gsapT1.to(camera.position, { duration: .1, x: -.75 }, `<`);
                 gsapT1.to(camera.position, { duration: 2, x: -.75 }); //stall for 2s
                 //gsapT1.call(function () { gsapT1.pause(); });
 
                 //to camera pos
-                gsapT1.to(camera.position, { duration: 4, z: 21.75 },);
-                gsapT1.to(camera.position, { duration: 4, x: -1.15 }, `<`);
+                gsapT1.to(camera.position, { duration: 10, ease: "power2.inOut", z: 21.75 },);
+                gsapT1.to(camera.position, { duration: 10, ease: "power2.inOut", x: -1.15 }, `<`);
 
 
-                /* gsapT1.call(function () {
-                    console.log('camera roation scene 1: ' + camera.rotation.y)
-                    console.log('camera position scene 1: ' + camera.position.z)
-                }) */
+                // false = fade out | true = custom transition handler
+                gsapT1.call(function () { fadeOverride = true });
             }
         ),
         new timelineObj(
-            'move sphere by y', -1,
-            [boxMesh, sphereMesh, boyModel],
+            'obscure flower and fade in boy', 0,
+            [flowerModel, boyModel, wispModel],
             function () {
                 gsapT1.clear();
                 gsapT1.call(function () {
                     if (activeClip != walk_cycle_NLA) { switchGLTFAnims(walk_cycle_NLA) }
                 })
-                gsapT1.to(sphereMesh.position, { duration: 1, y: sphereMesh.position.y + 1 });
-                gsapT1.to(sphereMesh.position, { duration: 1, y: sphereMesh.position.y });
+                mats.forEach(mat => {
+                    gsapT1.to(mat, { duration: .5, opacity: 0 }, '<');
+                });
+
+                gsapT1.to(camera.position, { duration: 2, ease: "power2.inOut", z: 2.5 });
+                gsapT1.to(camera.position, { duration: 2, ease: "power2.inOut", x: -.5 }, `<`);
+                gsapT1.to(camera.position, { duration: 2, ease: "power2.inOut", y: -.25 }, `<`);
+
+                /* gsapT1.to(camera.rotation, { duration: 2, ease: "power2.inOut", x: -1 });
+                gsapT1.to(camera.rotation, { duration: 2, ease: "power2.inOut", y: .5 }, `<`); */
+                //gsapT1.to(camera.rotation, { duration: 2, ease: "power2.inOut", z: -1 }, `<`);
+                // lerp lookat() function
+                let vecFrom = camera.getWorldDirection(new THREE.Vector3());
+                let vecTo = new THREE.Vector3(-1, .5, 0);
+                let state;
+                gsapT1.to({}, {
+                    duration: 2, ease: "power2.inOut",
+                    onUpdate: function () {
+                        state = vecFrom.lerp(vecTo, this.progress());
+                        camera.lookAt(state);
+                        console.log(`lookat ` + this.progress());
+                    }
+                }, `<`);
+
+                gsapT1.to(mats[0], { duration: 1, opacity: 1 });
+
+                mats.forEach(mat => {
+                    gsapT1.to(mat, { duration: 1, opacity: 1 }, '<');
+                });
             }
         ),
         new timelineObj(
             'rotate box by z', -1,
-            [boxMesh],
+            [boxMesh, sphereMesh, boyModel],
             function () {
                 gsapT1.clear();
                 gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z + 6 });
@@ -555,7 +577,9 @@ function advanceScene() {
     //console.log(`timelineClips length ${timelineClips.length}`)
     if (activeSceneNum < timelineClips.length - 1) {
         activeSceneNum++;
+        //handle <p> swap for narration
         swapNarration(allNarration[activeSceneNum].innerHTML);
+        //handle fade out, layers, and cursor
         playScene(timelineClips[activeSceneNum], activeSceneNum)
     } else {
         activeSceneNum = 0;
@@ -564,29 +588,32 @@ function advanceScene() {
     }
 }
 
-function initLayers() {
-    scene.traverse(child => {
-        if (child instanceof THREE.Mesh) {
-            child.layers.disableAll();
-        }
-    });
-}
-
 function playScene(sceneObj, layerNum) {
     console.log(`active scene: ${layerNum} ${sceneObj.name}`);
     //console.log(sceneObj);
 
     gsapT3.clear();
+    //gsapT1.progress(0);
+    gsapT1.clear();
 
     // fade out mats
-    gsapT3.to(mats[0], { duration: .5, opacity: 0 });
+    console.log(`playScene fade mats`)
+    if (!fadeOverride) {
+        mats.forEach(mat => {
+            gsapT3.to(mat, { duration: .5, opacity: 0 }, '<');
+        });
+    }
 
     // assign layers
     gsapT3.call(function () { assignLayers(sceneObj, layerNum) });
 
     // set repeat and play animations
     gsapT1.repeat(sceneObj.repeat);
-    gsapT3.call(function () { sceneObj.playActions() });
+
+    gsapT3.call(function () {
+        fadeOverride = false;
+        sceneObj.playActions();
+    });
 
     // queue the cursor fade to t2 after t1 has completed
     /* gsapT1.call(function () { */
@@ -597,7 +624,18 @@ function playScene(sceneObj, layerNum) {
     /* }); */
 
     // fade in mats
-    gsapT3.to(mats[0], { duration: 1, opacity: 1 });
+    mats.forEach(mat => {
+        gsapT3.to(mat, { duration: 1, opacity: 1 }, '<');
+    });
+
+}
+
+function initLayers() {
+    scene.traverse(child => {
+        if (child instanceof THREE.Mesh) {
+            child.layers.disableAll();
+        }
+    });
 }
 
 function assignLayers(sceneObj, layerNum) {
@@ -612,17 +650,9 @@ function assignLayers(sceneObj, layerNum) {
     camera.layers.set(layerNum);
 }
 
-
-
 //#endregion
 
 //#region NARRATOR
-
-function initNarration() {
-    //get array of all narration, get narrator, swap allNarration[i] with narrator on timer
-    allNarration = document.querySelectorAll(".allNarration p");
-    swapNarration(allNarration[activeSceneNum].innerHTML);
-}
 
 function swapNarration(newText) {
     //get timeline2, clear t2, fade out and then in narration over duration .5s
@@ -650,7 +680,11 @@ function swapNarration(newText) {
         });
     }
 }
-
+function initNarration() {
+    //get array of all narration, get narrator, swap allNarration[i] with narrator on timer
+    allNarration = document.querySelectorAll(".allNarration p");
+    swapNarration(allNarration[activeSceneNum].innerHTML);
+}
 function spliceString(str, substr) {
     let flag = false;
     let indexes = [];
