@@ -59,14 +59,18 @@ cursor.addEventListener("click", advanceScene);
 //const bloomLayer = new THREE.Layers();
 
 let effectComposer, renderPass, bloomPass;
+let axesHelper;
 
-let boyAnimations, settings;
+let boyAnimations, girlAnimations, settings;
 let mats = [];
 let gltfModels = [];
 
 let boxMesh, sphereMesh;
-let boyMixer1, skeleton, boyModel, duneModel, wispModel, flowerModel;
+let boyMixer, girlMixer;
+let skeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel, flowerModel;
 let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
+let blow_kiss_NLA;
+
 let allNarration, activeSceneNum = 0;
 let fadeOverride = false;
 
@@ -149,6 +153,13 @@ function initObjects() {
     })
     mats.push(wispMat);
 
+    /* const windMat = new THREE.MeshBasicMaterial({
+        map: new THREE.VideoTexture('wind_wisp.mp4'),
+        side: THREE.DoubleSide,
+        transparent: true,
+    });
+    mats.push(windMat); */
+
     const flowerMat = new THREE.MeshBasicMaterial({
         map: new THREE.TextureLoader().load("flower_diffuse.png"),
         side: THREE.DoubleSide,
@@ -219,15 +230,15 @@ function initObjects() {
      * LOAD WISP GLTF 
      */
     gltfLoader.load(`sandWisp_v1.gltf`, (gltf) => {
-        wispModel = gltf.scene;
+        sandWispModel = gltf.scene;
 
         //set transforms
-        wispModel.scale.set(2, 2, 2);
-        wispModel.position.set(-1, 0, -1);
+        sandWispModel.scale.set(2, 2, 2);
+        sandWispModel.position.set(-1, 0, -1);
         //console.log(wispModel)
 
         // assign material and shadow
-        wispModel.traverse(function (child) {
+        sandWispModel.traverse(function (child) {
             if (child.isMesh) {
                 //object.receiveShadow = true;
                 child.material = wispMat;
@@ -235,8 +246,8 @@ function initObjects() {
         });
 
         // add model to scene
-        gltfModels.push(wispModel);
-        scene.add(wispModel);
+        gltfModels.push(sandWispModel);
+        scene.add(sandWispModel);
     });
 
     /**
@@ -288,8 +299,8 @@ function initObjects() {
         // add BOY to scene
         gltfModels.push(boyModel);
         scene.add(boyModel);
-        console.log(boyModel)
-        console.log(gltfModels)
+        //console.log(boyModel)
+        //console.log(gltfModels)
 
         // show rig skeleton
         skeleton = new THREE.SkeletonHelper(boyModel);
@@ -297,14 +308,14 @@ function initObjects() {
         //scene.add(skeleton);
 
         // init animation mixer
-        boyMixer1 = new THREE.AnimationMixer(boyModel);
+        boyMixer = new THREE.AnimationMixer(boyModel);
         boyAnimations = gltf.animations;
 
-        movePos1_NLA = boyMixer1.clipAction(gltf.animations[0]);
-        pole_walking_NLA = boyMixer1.clipAction(gltf.animations[1]);
-        sitting_NLA = boyMixer1.clipAction(gltf.animations[2]);
-        start_walking_NLA = boyMixer1.clipAction(gltf.animations[3]);
-        walk_cycle_NLA = boyMixer1.clipAction(gltf.animations[4]);
+        movePos1_NLA = boyMixer.clipAction(gltf.animations[0]);
+        pole_walking_NLA = boyMixer.clipAction(gltf.animations[1]);
+        sitting_NLA = boyMixer.clipAction(gltf.animations[2]);
+        start_walking_NLA = boyMixer.clipAction(gltf.animations[3]);
+        walk_cycle_NLA = boyMixer.clipAction(gltf.animations[4]);
 
         activeClip = walk_cycle_NLA;
         activeClip.play();
@@ -327,6 +338,38 @@ function initObjects() {
 
         //#endregion
         //initTimeline(boyAnimations);
+    });
+
+    gltfLoader.load(`theGirl_v6.gltf`, (gltf) => {
+        girlModel = gltf.scene;
+
+        //set transforms
+        girlModel.scale.set(.1, .1, .1);
+        girlModel.position.set(-.6, 0, 2);
+        girlModel.rotation.set(0, degToRad(170), 0);
+
+        // assign cast shadow and materials
+        /* girlModel.traverse(function (child) {
+            if (child.isMesh) {
+                //object.castShadow = true;
+                child.material = txtMat;
+            }
+        }); */
+
+        // add GIRL to scene
+        gltfModels.push(girlModel);
+        scene.add(girlModel);
+        /* console.log(`girlModel: `);
+        console.log(girlModel)
+        console.log(`gltfModels[]: `);
+        console.log(gltfModels) */
+
+        // init animation mixer
+        girlMixer = new THREE.AnimationMixer(girlModel);
+        girlAnimations = gltf.animations;
+
+        blow_kiss_NLA = girlMixer.clipAction(gltf.animations[0]);
+        blow_kiss_NLA.play();
     });
     //#endregion
 
@@ -361,6 +404,9 @@ function initScene() {
         width: window.innerWidth,
         height: window.innerHeight
     }
+
+    axesHelper = new THREE.AxesHelper(5);
+    scene.add(axesHelper);
 
     window.addEventListener('resize', () => {
         // Update sizes
@@ -444,7 +490,7 @@ function initTimeline() {
     timelineClips.push(
         new timelineObj(
             'zoom through rocks to flower', 0,
-            [flowerModel, boyModel, wispModel],
+            [flowerModel, boyModel, sandWispModel],
             function () {
                 //camera.rotation.x += (Math.PI / 180);
                 //camera.rotateOnWorldAxis(new THREE.Vector3(0.0, 1.0, 0.0), 3)
@@ -481,11 +527,11 @@ function initTimeline() {
         ),
         new timelineObj(
             'obscure flower and fade in boy', 0,
-            [flowerModel, boyModel, wispModel],
+            [flowerModel, boyModel, sandWispModel],
             function () {
                 gsapT1.clear();
                 gsapT1.call(function () {
-                    if (activeClip != walk_cycle_NLA) { switchGLTFAnims(walk_cycle_NLA) }
+                    if (activeClip != sitting_NLA) { switchGLTFAnims(sitting_NLA) }
                 })
                 mats.forEach(mat => {
                     gsapT1.to(mat, { duration: .5, opacity: 0 }, '<');
@@ -507,11 +553,11 @@ function initTimeline() {
                     onUpdate: function () {
                         state = vecFrom.lerp(vecTo, this.progress());
                         camera.lookAt(state);
-                        console.log(`lookat ` + this.progress());
+                        //console.log(`lookat ` + this.progress());
                     }
                 }, `<`);
 
-                gsapT1.to(mats[0], { duration: 1, opacity: 1 });
+                gsapT1.to(mats[0], { duration: 1, opacity: 0 });
 
                 mats.forEach(mat => {
                     gsapT1.to(mat, { duration: 1, opacity: 1 }, '<');
@@ -519,16 +565,42 @@ function initTimeline() {
             }
         ),
         new timelineObj(
-            'rotate box by z', -1,
-            [boxMesh, sphereMesh, boyModel],
+            'fade girl and blow kiss', 0,
+            [boyModel, girlModel, axesHelper],
             function () {
                 gsapT1.clear();
-                gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z + 6 });
-                gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z });
+                gsapT1.call(function () {
+                    if (activeClip != sitting_NLA) { switchGLTFAnims(sitting_NLA) }
+                });
+                // make this fade out girl at some point
+                girlModel.traverse(child => {
+                    if (child.material) {
+                        child.material.transparent = true;
+                        gsapT1.to(child.material, { duration: .01, opacity: 0 }, '<');
+                    };
+                    //console.log(`%c FADE OUT GIRL SCENE 3`, 'color: #00FFE3')
+                });
+
+                // set initial camera rotation/position
+                gsapT1.to(camera.position, { duration: 0, x: -.75 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, y: .35 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, z: -1.75 }, `<`);
+                gsapT1.call(function () {
+                    camera.lookAt(new THREE.Vector3(-.5, .5, 0));
+                })
+                gsapT1.to(sphereMesh.position, { duration: 3, x: sphereMesh.position }); //filler
+                gsapT1.to(sphereMesh.position, { duration: 1, x: sphereMesh.position }); //filler
+                girlModel.traverse(child => {
+                    if (child.material) {
+                        child.material.transparent = true;
+                        gsapT1.to(child.material, { duration: 3.5, opacity: 1 }, '<');
+                    };
+                    //console.log(`%c FADE OUT GIRL SCENE 3`, 'color: #00FFE3')
+                });
             }
         ),
         new timelineObj(
-            'rotate box by z', -1,
+            'boy turns into wind', -1,
             [boxMesh, boyModel],
             function () {
                 gsapT1.clear();
@@ -573,7 +645,7 @@ function initTimeline() {
 
 function advanceScene() {
     cursor.style.display = 'none';
-    console.log(`set cursor to none`)
+    //console.log(`%c set cursor to none`, `#fefefe`)
     //console.log(`timelineClips length ${timelineClips.length}`)
     if (activeSceneNum < timelineClips.length - 1) {
         activeSceneNum++;
@@ -589,7 +661,7 @@ function advanceScene() {
 }
 
 function playScene(sceneObj, layerNum) {
-    console.log(`active scene: ${layerNum} ${sceneObj.name}`);
+    console.log(`%c active scene: ${layerNum} ${sceneObj.name}`, 'color: #1BA5D8');
     //console.log(sceneObj);
 
     gsapT3.clear();
@@ -597,13 +669,12 @@ function playScene(sceneObj, layerNum) {
     gsapT1.clear();
 
     // fade out mats
-    console.log(`playScene fade mats`)
+    console.log(`%c playScene fade mats`, `color: #B5B5B5`)
     if (!fadeOverride) {
         mats.forEach(mat => {
             gsapT3.to(mat, { duration: .5, opacity: 0 }, '<');
         });
     }
-
     // assign layers
     gsapT3.call(function () { assignLayers(sceneObj, layerNum) });
 
@@ -619,7 +690,7 @@ function playScene(sceneObj, layerNum) {
     /* gsapT1.call(function () { */
     gsapT2.call(function () {
         cursor.style.display = 'block'
-        console.log(`cursor to block`)
+        //console.log(`%c cursor to block`, `#fefefe`);
     })
     /* }); */
 
@@ -650,6 +721,9 @@ function assignLayers(sceneObj, layerNum) {
     camera.layers.set(layerNum);
 }
 
+function degToRad(deg) {
+    return (deg * (Math.PI / 180))
+}
 //#endregion
 
 //#region NARRATOR
@@ -729,16 +803,18 @@ const tick = () => {
 
     // init GSAP only when models are loaded
     if (!mixerLoaded) {
-        if (boyMixer1 && wispModel && flowerModel) {
+        if (boyMixer && sandWispModel && flowerModel) {
             initTimeline();
             mixerLoaded = true;
-            console.log(wispModel);
-            console.log("mixer and timeline loaded");
+            console.log(sandWispModel);
+            console.log(`%c mixer and timeline loaded`, 'color: #B5B5B5');
+
         }
     } else {
         // Update animation timing
-        boyMixer1.setTime(clock.getElapsedTime());
-        wispModel.rotation.y = clock.getElapsedTime();
+        boyMixer.setTime(clock.getElapsedTime());
+        girlMixer.setTime(clock.getElapsedTime());
+        sandWispModel.rotation.y = clock.getElapsedTime();
     }
 
     //camera.rotation.y = clock.getElapsedTime();
