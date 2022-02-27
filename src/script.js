@@ -186,7 +186,7 @@ function initObjects() {
     //scene.add(boxMesh); */
 
     //pointsMesh = new THREE.Points(pointsGeo, shaderMat5);
-    pointsMesh = new THREE.Points(bufferGeo, pointsMat);
+    pointsMesh = new THREE.Points(bufferGeo, particleShader);
     scene.add(pointsMesh);
 
     //#endregion
