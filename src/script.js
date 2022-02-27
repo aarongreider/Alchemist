@@ -49,6 +49,18 @@ let uniforms = {
 let cursor = document.getElementById('cursor');
 cursor.addEventListener("click", advanceScene);
 
+let startButton = document.querySelector('#splash button');
+startButton.addEventListener("click", function () {
+    console.log('%c starting 3D experience', 'color: lightgreen');
+    canBegin = true;
+    windVideo.play();
+    gsap.to(document.getElementById('splash'), {
+        duration: 2, ease: "power2.inOut", opacity: 0, onComplete: function () {
+            document.getElementById('splash').style.display = 'none';
+        }
+    });
+});
+
 //#endregion
 
 /** 
@@ -65,7 +77,8 @@ let boyAnimations, girlAnimations, settings;
 let mats = [];
 let gltfModels = [];
 
-let boxMesh, sphereMesh;
+let windVideo;
+let boxMesh, sphereMesh, pointsMesh;
 let boyMixer, girlMixer;
 let skeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel, flowerModel;
 let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
@@ -89,7 +102,7 @@ function timelineObj(name, repeat, actors, playActions) {
 const timelineClips = [];
 // T1 — handles finite scene/mesh animations
 // T1_2 — handles repeating scene/mesh animations
-// T2 — handles text transitions
+// T2 — handles HTML transitions
 // T3 — handles material transitions
 let gsapT1 = gsap.timeline({ repeat: 0 });
 let gsapT1_2 = gsap.timeline({ repeat: -1 });
@@ -97,7 +110,7 @@ let gsapT2 = gsap.timeline({ repeat: 0 });
 let gsapT3 = gsap.timeline({ repeat: 0 });
 
 let controls, camera, renderer;
-let meshLoaded = false, mixerLoaded = false, isRotating = true;
+let meshLoaded = false, mixerLoaded = false, isRotating = true, canBegin = false;
 
 /**
  * INIT OJBECTS
@@ -105,11 +118,9 @@ let meshLoaded = false, mixerLoaded = false, isRotating = true;
 function initObjects() {
     //#region GEO/TXT
     // Geometry
-    //const torusGeo = new THREE.TorusGeometry(.75, .2, 16, 100);
-    const planeGeo = new THREE.PlaneGeometry(1, 1);
     const boxGeo = new THREE.BoxGeometry(1, 1, 1);
     const sphereGeo = new THREE.SphereGeometry(.5, 100, 100);
-    const circleGeo = new THREE.CircleGeometry(.5, 30);
+    const pointsGeo = new THREE.SphereGeometry(.1, 10, 10);
 
     //  Textures
     const checkTxt = txtLoader.load(`https://threejsfundamentals.org/threejs/resources/images/checker.png`);
@@ -120,6 +131,9 @@ function initObjects() {
 
     const wispTxt = txtLoader.load(`SandWispTxt2k.png`);
     const wispTxtAlpha = txtLoader.load(`SandWispTxt2k_alpha.png`);
+
+    windVideo = document.getElementById('windVideo');
+    const windTxt = new THREE.VideoTexture(windVideo);
     //#endregion
 
     //#region MATERIALS
@@ -144,28 +158,35 @@ function initObjects() {
     });
     mats.push(wireMat);
 
-    const wispMat = new THREE.MeshBasicMaterial({
+    const sandWispMat = new THREE.MeshBasicMaterial({
         map: wispTxt,
         //color: 0xffffff,
         side: THREE.DoubleSide,
         alphaMap: wispTxtAlpha,
         transparent: true,
     })
-    mats.push(wispMat);
+    mats.push(sandWispMat);
 
-    /* const windMat = new THREE.MeshBasicMaterial({
-        map: new THREE.VideoTexture('wind_wisp.mp4'),
-        side: THREE.DoubleSide,
+    const windMat = new THREE.MeshBasicMaterial({
         transparent: true,
+        map: windTxt,
+        side: THREE.DoubleSide,
+        opacity: .25,
+        //alphaMap: windTxt,
     });
-    mats.push(windMat); */
+    mats.push(windMat);
 
     const flowerMat = new THREE.MeshBasicMaterial({
-        map: new THREE.TextureLoader().load("flower_diffuse.png"),
+        map: txtLoader.load("flower_diffuse.png"),
         side: THREE.DoubleSide,
         transparent: true,
     });
     mats.push(flowerMat);
+
+    const pointsMat = new THREE.PointsMaterial({
+        transparent: true,
+        size: .001,
+    })
 
     const glowMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
@@ -222,12 +243,15 @@ function initObjects() {
     boxMesh.position.set(-1, 1, -1);
     scene.add(boxMesh);
 
+    pointsMesh = new THREE.Points(pointsGeo, pointsMat);
+    scene.add(pointsMesh);
+
     //#endregion
 
     //#region GLTF
 
     /**
-     * LOAD WISP GLTF 
+     * LOAD WISPS GLTF 
      */
     gltfLoader.load(`sandWisp_v1.gltf`, (gltf) => {
         sandWispModel = gltf.scene;
@@ -241,13 +265,34 @@ function initObjects() {
         sandWispModel.traverse(function (child) {
             if (child.isMesh) {
                 //object.receiveShadow = true;
-                child.material = wispMat;
+                child.material = sandWispMat;
             }
         });
 
         // add model to scene
         gltfModels.push(sandWispModel);
         scene.add(sandWispModel);
+    });
+
+    gltfLoader.load(`wind_wisp_long1.gltf`, (gltf) => {
+        windWispModel = gltf.scene;
+
+        //set transforms
+        windWispModel.scale.set(1, 1, 1);
+        windWispModel.position.set(0, 0, 0);
+        console.log(`%c ${windWispModel}`, `color: #e26f03`)
+
+        // assign material and shadow
+        windWispModel.traverse(function (child) {
+            if (child.isMesh) {
+                //object.receiveShadow = true;
+                child.material = windMat;
+            }
+        });
+
+        // add model to scene
+        gltfModels.push(windWispModel);
+        scene.add(windWispModel);
     });
 
     /**
@@ -490,7 +535,7 @@ function initTimeline() {
     timelineClips.push(
         new timelineObj(
             'zoom through rocks to flower', 0,
-            [flowerModel, boyModel, sandWispModel],
+            [pointsMesh, flowerModel, boyModel, sandWispModel],
             function () {
                 //camera.rotation.x += (Math.PI / 180);
                 //camera.rotateOnWorldAxis(new THREE.Vector3(0.0, 1.0, 0.0), 3)
@@ -601,7 +646,7 @@ function initTimeline() {
         ),
         new timelineObj(
             'boy turns into wind', -1,
-            [boxMesh, boyModel],
+            [windWispModel, boyModel],
             function () {
                 gsapT1.clear();
                 gsapT1.call(function () {
@@ -695,6 +740,9 @@ function playScene(sceneObj, layerNum) {
     /* }); */
 
     // fade in mats
+    /**
+     * TODO: assign mats via initial parameters, rather than uniform values
+     */
     mats.forEach(mat => {
         gsapT3.to(mat, { duration: 1, opacity: 1 }, '<');
     });
@@ -803,7 +851,7 @@ const tick = () => {
 
     // init GSAP only when models are loaded
     if (!mixerLoaded) {
-        if (boyMixer && sandWispModel && flowerModel) {
+        if (canBegin && boyMixer && sandWispModel && flowerModel) {
             initTimeline();
             mixerLoaded = true;
             console.log(sandWispModel);

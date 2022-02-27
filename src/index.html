@@ -11,13 +11,22 @@
 </head>
 
 <body id="body">
+
     <div id="canvasContainer">
         <canvas class="webgl"></canvas>
     </div>
 
-    <video id="windVideo" loop crossOrigin="anonymous" playsinline style="display:none">
-        <source src="wind_wisp.mp4" type='video/mp4;'>
-    </video>
+    <div id="splash">
+        <h1>The Alchemist</h1>
+
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore
+            magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+            commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat
+            nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit
+            anim id est laborum.</p>
+
+        <button>PLAY</button>
+    </div>
 
     <script id="vertexShader" type="x-shader/x-vertex">
         varying vec2 vUv;
@@ -182,6 +191,9 @@
         </p>
     </div>
 
+    <video id="windVideo" loop crossOrigin="anonymous" playsinline style="height: 1px; width: 1px; display:none">
+        <source src="/Users/aarongreider/Desktop/CODE/Alchemist/static/wind_wisp2.mp4" type='video/mp4;'>
+    </video>
 
 </body>
 
