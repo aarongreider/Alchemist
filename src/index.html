@@ -11,12 +11,13 @@
 </head>
 
 <body id="body">
-
     <div id="canvasContainer">
         <canvas class="webgl"></canvas>
     </div>
 
-
+    <video id="windVideo" loop crossOrigin="anonymous" playsinline style="display:none">
+        <source src="wind_wisp.mp4" type='video/mp4;'>
+    </video>
 
     <script id="vertexShader" type="x-shader/x-vertex">
         varying vec2 vUv;
@@ -28,61 +29,159 @@
     	}
     </script>
 
-    <script id="vertexParticleShader" type="x-shader/x-vertex">
-        varying vec2 vUv;
-    	uniform float time;
-        varying vec3 vPosition;
-        uniform sampler2D positionTexture;
-        attribute vec2 reference;
+    <script id="fragmentShader" type="x-shader/x-fragment">
+                varying vec2 vUv;
+    			uniform float time;
+                uniform vec2 resolution;
+                uniform sampler2D sampleTxt;
     
-    	void main()	{
-    		vUv = reference;
-            vec3 pos = texture(positionTexture, reference).xyz;
-            vec4 mvPosition = modelViewMatrix * vec4( pos, 1. );
-
-            gl_PointSize = 30. * ( 1. / - mvPosition.z );
-            gl_Position = projectionMatrix * mvPosition;
-    	}
+                void main() {
+                    	vec3 c;
+                        //z -> distance between colors
+                        //l -> length of uv and p OR time
+                        float l;
+                        float z = time;
+                        //each frame run 3 iterations for rgb
+                        for(int i=0;i<3;i++) {
+                            float a = 0.5;
+                            //vec2 uv,p = ( gl_FragCoord.xy / resolution.xy ) - a;
+                            //uv = p;
+                            vec2 uv = vUv;
+                            vec2 p = ( gl_FragCoord.xy / resolution.xy ) - abs(sin(vUv));
+                            //uv-=0.25;
+                            p -= .5;
+                            p.x *= resolution.x/resolution.y;
+                            z += .07;
+                            l = length(p);
+                            uv += p/l*(sin(z)+.25)*sin(l*9.-z-z);
+                            c[i] = .01/length(mod(uv,1.)-.5);
+                        } 
+                        //gl_FragColor=vec4(c/l + 0.1, c/l);
+                        gl_FragColor=vec4(c/l, (c.x+c.y+c.z));
+                }
     </script>
 
-    <!-- //particle color shader i think... -->
-    <script id="fragmentShaderColor" type="x-shader/x-fragment">
+    <script id="fragmentShader2" type="x-shader/x-fragment">
+                varying vec2 vUv;
+                uniform sampler2D sampleTxt;
+    
+                void main() { 
+                    gl_FragColor = texture2D(sampleTxt,vUv);
+                }
+    </script>
 
-        //uniform float progress;
-        //uniform vec2 resolution;
-        varying vec2 vUv;
-        //varying vec3 vPosition;
-        //uniform float PI = 3.14159265359;
+    <script id="fragmentShader3" type="x-shader/x-fragment">
+                uniform float time;
+                varying vec2 vUv;
 
-			void main()	{
+                void main( void ) {
+                    vec2 position = - 1.0 + 2.0 * vUv;
 
-                gl_FragColor = vec4( vUv, 0.0 , 1.0 );
+                    float red = abs( sin( position.x * position.y + time / 5.0 ) );
+                    float green = abs( sin( position.x * position.y + time / 4.0 ) );
+                    float blue = abs( sin( position.x * position.y + time / 3.0 ) );
+                    gl_FragColor = vec4( red, green, blue, 1.0 );
+                }
+
+    </script>
+
+    <script id="fragmentShader4" type="x-shader/x-fragment">
+        //uniform float thickness;
+			varying vec3 vCenter;
+			void main() {
+                float thickness = 1;
+				vec3 afwidth = fwidth( vCenter.xyz );
+				vec3 edge3 = smoothstep( ( thickness - 1.0 ) * afwidth, thickness * afwidth, vCenter.xyz );
+				float edge = 1.0 - min( min( edge3.x, edge3.y ), edge3.z );
+
+				gl_FragColor.rgb = gl_FrontFacing ? vec3( 0.9, 0.9, 1.0 ) : vec3( 0.4, 0.4, 0.5 );
+				//gl_FragColor.a = edge;
 
 			}
     </script>
 
-    <!-- //particle position shader -->
-    <script id="fragmentSimulation" type="x-shader/x-fragment">
-        //uniform vec4 resolution;
-        /* varying vec2 vUv;
-    	uniform float time; */
-        uniform sampler2D texturePosition;
+    <div id="cursor">
 
-			void main()	{
+    </div>
 
-				vec2 uv = gl_FragCoord.xy / resolution.xy;
-                //vec2 uv = gl_FragCoord.xy / vec2(1000.,800.).xy;
-				vec4 tmpPos = texture2D( texturePosition, uv );
-				vec3 position = tmpPos.xyz;
-				
-                gl_FragColor = vec4( position + vec3(0.0006) , 1. );
+    <div class="narrator">
+        <p>
 
-			}
-    </script>
+        </p>
+    </div>
 
-    <video id="windVideo" loop crossOrigin="anonymous" playsinline style="height: 1px; width: 1px; display:none">
-        <source src="/Users/aarongreider/Desktop/CODE/Alchemist/static/wind_wisp2.mp4" type='video/mp4;'>
-    </video>
+    <div class="allNarration">
+        <p>
+            <span>The boy looked out at the horizon. There were mountains in the distance.</span>
+            <span>And there were dunes, rocks, and plants that insisted on living where survival seemed
+                impossible.</span>
+        </p>
+        <p>
+            <i>"What do you want here today?"</i> the desert asked him. <i>"Didn't you spend enough time looking at me
+                yesterday?"</i>
+        </p>
+        <p>
+            <span><i>"Somewhere you are holding the person I love,"</i> the boy said.</span>
+            <span><i>"So, when I look out over your sands, I am also looking at her."</i></span>
+        </p>
+        <p>
+            <i>"I want to return to her, and I need your help so that I can turn myself into the wind."</i>
+        </p>
+        <p>
+            <i>"What is love?"</i> the desert asked.
+        </p>
+        <p>
+            <i>"Love is the falcon's flight over your sands."</i>
+        </p>
+        <p>
+            <span><i>"Because for him, you are a green field, from which he always returns with game."</i></span>
+            <span><i>"He knows your rocks, your dunes, and your mountains, and you are generous to him."</i></span>
+        </p>
+        <p>
+            <i>"The falcon's beak carries bits of me, myself,"</i> the desert said.
+        </p>
+        <p>
+            <i>
+                "For years, I care for his game, feeding it with the little water that I have, and then I show him where
+                the game is."
+            </i>
+        </p>
+        <p>
+            <i>
+                "And, one day, as I enjoy the fact that his game thrives on my surface, the falcon dives out of the sky,
+                and takes away
+                what I've created."
+            </i>
+        </p>
+        <p>
+            <i>"But that's why you created the game in the first place,"</i> the boy answered.
+            <i>"To nourish the falcon. And the falcon then nourishes man."</i>
+        </p>
+        <p>
+            <i>"And, eventually, man will nourish your sands, where the game will once again flourish. That's how the
+                world goes."</i>
+        </p>
+        <p>
+            <i>"So is that what love is?"</i>
+        </p>
+        <p>
+            <span><i>"Yes, that's what love is."</i></span>
+            <span>The desert didn't answer him for a few moments.</span>
+        </p>
+        <p>
+            Then it told him, <i>"I'll give you my sands to help the wind to blow, but, alone, I can't do anything. You
+                have to ask for help from the wind."</i>
+        </p>
+        <p>
+            A breeze began to blow. The tribesmen watched the boy from a distance, as the wind approached the boy and
+            touched his
+            face.
+        </p>
+        <p>
+            <i>"Help me,"</i> the boy said. <i>"There was a day you carried the voice of my loved one to me."</i>
+        </p>
+    </div>
+
 
 </body>
 
