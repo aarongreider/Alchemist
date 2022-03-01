@@ -1,9 +1,11 @@
+//#region IMPORT
 import './style.css'
 //import './checker.png'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'dat.gui'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { AnimationMixer, BlendingSrcFactor, DstAlphaFactor, OneFactor, PCFShadowMap, SkeletonHelper, SrcAlphaFactor, SubtractEquation } from 'three'
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { SelectiveBloomEffect, BloomEffect, EffectComposer, EffectPass, RenderPass } from "postprocessing";
@@ -12,6 +14,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
  */
 import { gsap } from 'gsap/all';
+//#endregion
 
 //#region SCENE VARIABLES
 
@@ -29,6 +32,7 @@ const txtLoader = new THREE.TextureLoader();
 
 // GLTF Loader
 const gltfLoader = new GLTFLoader();
+const fbxLoader = new FBXLoader();
 
 // Canvas
 const canvas = document.querySelector('canvas.webgl');
@@ -63,6 +67,7 @@ startButton.addEventListener("click", function () {
 
 //#endregion
 
+//#region OBJECT VARIBLES
 /** 
  * GLOBAL VARIABLES
  */
@@ -73,16 +78,18 @@ startButton.addEventListener("click", function () {
 let effectComposer, renderPass, bloomPass;
 let axesHelper;
 
-let boyAnimations, girlAnimations, settings;
+let settings;
 let mats = [];
 let gltfModels = [];
+let mixers = [];
 
 let windVideo;
 let boxMesh, sphereMesh, pointsMesh;
-let boyMixer, girlMixer;
-let skeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel, flowerModel;
+let boyMixer, girlMixer, heartMixer, birdMixer;
+let boyAnimations, girlAnimations, heartAnimations, birdAnimations;
+let skeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel, flowerModel, heartModel, heartPointsModel, birdModel;
 let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
-let blow_kiss_NLA;
+let blow_kiss_NLA, spin_NLA;
 
 let allNarration, activeSceneNum = 0;
 let fadeOverride = false;
@@ -111,6 +118,8 @@ let gsapT3 = gsap.timeline({ repeat: 0 });
 
 let controls, camera, renderer;
 let meshLoaded = false, mixerLoaded = false, isRotating = true, canBegin = false;
+
+//#endregion
 
 /**
  * INIT OJBECTS
@@ -185,7 +194,7 @@ function initObjects() {
 
     const pointsMat = new THREE.PointsMaterial({
         transparent: true,
-        size: .001,
+        size: .0001,
     })
 
     const glowMat = new THREE.MeshStandardMaterial({
@@ -296,8 +305,8 @@ function initObjects() {
     });
 
     /**
-    * LOAD FLOWER GLTF 
-    */
+     * LOAD FLOWER GLTF 
+     */
     gltfLoader.load(`desert_flower_v3.gltf`, (gltf) => {
         flowerModel = gltf.scene;
 
@@ -320,6 +329,97 @@ function initObjects() {
         gltfModels.push(flowerModel);
         scene.add(flowerModel);
     });
+
+    /**
+    * LOAD HEART GLTF 
+    */
+    gltfLoader.load(`crystal_heart.gltf`, (gltf) => {
+        heartModel = gltf.scene;
+
+        //set transforms
+        heartModel.scale.set(1, 1, 1);
+
+        //heartPointsModel = new THREE.Points(heartModel, pointsMat);
+
+        // assign material and shadow
+        /* heartModel.traverse(function (child) {
+            if (child.isMesh) {
+                child.material = pointsMat;
+            }
+        }); */
+
+        // add model to scene
+        //gltfModels.push(heartModel);
+        gltfModels.push(heartModel);
+        scene.add(heartModel);
+
+        // init animation mixer
+        heartMixer = new THREE.AnimationMixer(heartModel);
+        heartAnimations = gltf.animations;
+        mixers.push(heartMixer);
+
+        spin_NLA = heartMixer.clipAction(gltf.animations[0]);
+        spin_NLA.play();
+    });
+
+    /**
+    * LOAD BIRDIE GLTF 
+    */
+    fbxLoader.load(`birdie_v6.fbx`, function (fbx) {
+        birdModel = fbx;
+
+        //set transforms
+        birdModel.scale.set(.02, .02, .02);
+
+        // assign material and shadow
+        birdModel.traverse(function (child) {
+            if (child.isMesh) {
+                child.material = glowMat;
+            }
+        });
+
+        // add model to scene
+        //gltfModels.push(birdModel);
+        scene.add(birdModel);
+
+        // init animation mixer
+        birdMixer = new THREE.AnimationMixer(birdModel);
+        birdAnimations = fbx.animations;
+        mixers.push(birdMixer);
+
+        let fly_NLA = birdMixer.clipAction(fbx.animations[0]);
+        fly_NLA.play();
+
+        console.log(fbx.animations[0]);
+    });
+
+    /* gltfLoader.load(`birdie_v6-fbx.gltf`, (gltf) => {
+        birdModel = gltf.scene;
+
+        //set transforms
+        birdModel.scale.set(.02, .02, .02);
+
+        // assign material and shadow
+        birdModel.traverse(function (child) {
+            if (child.isMesh) {
+                child.material = glowMat;
+            }
+        });
+
+        // add model to scene
+        gltfModels.push(birdModel);
+        scene.add(birdModel);
+
+        // init animation mixer
+        birdMixer = new THREE.AnimationMixer(birdModel);
+        birdAnimations = gltf.animations;
+        mixers.push(birdMixer);
+
+        let fly_NLA = birdMixer.clipAction(gltf.animations[0]);
+        fly_NLA.play();
+
+        console.log(gltf.animations[0])
+    }); */
 
     /**
     * LOAD BOY GLTF
@@ -355,6 +455,7 @@ function initObjects() {
         // init animation mixer
         boyMixer = new THREE.AnimationMixer(boyModel);
         boyAnimations = gltf.animations;
+        mixers.push(boyMixer);
 
         movePos1_NLA = boyMixer.clipAction(gltf.animations[0]);
         pole_walking_NLA = boyMixer.clipAction(gltf.animations[1]);
@@ -382,8 +483,11 @@ function initObjects() {
         folder1.add(settings, 'start walking');
 
         //#endregion
-        //initTimeline(boyAnimations);
     });
+
+    /**
+    * LOAD GIRL GLTF
+    */
 
     gltfLoader.load(`theGirl_v6.gltf`, (gltf) => {
         girlModel = gltf.scene;
@@ -412,6 +516,7 @@ function initObjects() {
         // init animation mixer
         girlMixer = new THREE.AnimationMixer(girlModel);
         girlAnimations = gltf.animations;
+        mixers.push(girlMixer);
 
         blow_kiss_NLA = girlMixer.clipAction(gltf.animations[0]);
         blow_kiss_NLA.play();
@@ -535,7 +640,7 @@ function initTimeline() {
     timelineClips.push(
         new timelineObj(
             'zoom through rocks to flower', 0,
-            [pointsMesh, flowerModel, boyModel, sandWispModel],
+            [birdModel, flowerModel, boyModel, sandWispModel],
             function () {
                 //camera.rotation.x += (Math.PI / 180);
                 //camera.rotateOnWorldAxis(new THREE.Vector3(0.0, 1.0, 0.0), 3)
@@ -617,6 +722,7 @@ function initTimeline() {
                 gsapT1.call(function () {
                     if (activeClip != sitting_NLA) { switchGLTFAnims(sitting_NLA) }
                 });
+
                 // make this fade out girl at some point
                 girlModel.traverse(child => {
                     if (child.material) {
@@ -627,14 +733,17 @@ function initTimeline() {
                 });
 
                 // set initial camera rotation/position
-                gsapT1.to(camera.position, { duration: 0, x: -.75 }, `<`);
-                gsapT1.to(camera.position, { duration: 0, y: .35 }, `<`);
-                gsapT1.to(camera.position, { duration: 0, z: -1.75 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, x: -1.3 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, y: .55 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, z: 2.55 }, `<`);
                 gsapT1.call(function () {
-                    camera.lookAt(new THREE.Vector3(-.5, .5, 0));
+                    camera.lookAt(new THREE.Vector3(.5, .5, 0));
                 })
+
+                // filler
                 gsapT1.to(sphereMesh.position, { duration: 3, x: sphereMesh.position }); //filler
                 gsapT1.to(sphereMesh.position, { duration: 1, x: sphereMesh.position }); //filler
+
                 girlModel.traverse(child => {
                     if (child.material) {
                         child.material.transparent = true;
@@ -654,6 +763,24 @@ function initTimeline() {
                 })
                 gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z + 6 });
                 gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z });
+            }
+        ),
+        new timelineObj(
+            'heart fades in and rotates', -1,
+            [heartModel],
+            function () {
+                gsapT1.clear();
+                gsapT1.call(function () {
+
+                })
+                gsapT1.to(camera.position, { duration: 0, x: 0 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, y: .55 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, z: -2 }, `<`);
+                gsapT1.call(function () {
+                    camera.lookAt(new THREE.Vector3(0, .5, 0));
+                })
+                //heart fade in and rotate
+
             }
         ),
     );
@@ -720,6 +847,16 @@ function playScene(sceneObj, layerNum) {
             gsapT3.to(mat, { duration: .5, opacity: 0 }, '<');
         });
     }
+    // fade out GLTF mats
+    gltfModels.forEach(model => {
+        model.traverse(child => {
+            if (child.material) {
+                child.material.transparent = true;
+                gsapT3.to(child.material, { duration: .5, opacity: 0 }, '<');
+            };
+        });
+    });
+
     // assign layers
     gsapT3.call(function () { assignLayers(sceneObj, layerNum) });
 
@@ -746,7 +883,15 @@ function playScene(sceneObj, layerNum) {
     mats.forEach(mat => {
         gsapT3.to(mat, { duration: 1, opacity: 1 }, '<');
     });
-
+    // fade in GLTF mats
+    gltfModels.forEach(model => {
+        model.traverse(child => {
+            if (child.material) {
+                child.material.transparent = true;
+                gsapT3.to(child.material, { duration: .75, opacity: 1 }, '<');
+            };
+        });
+    });
 }
 
 function initLayers() {
@@ -851,7 +996,7 @@ const tick = () => {
 
     // init GSAP only when models are loaded
     if (!mixerLoaded) {
-        if (canBegin && boyMixer && sandWispModel && flowerModel) {
+        if (canBegin && boyMixer && sandWispModel && flowerModel && birdMixer) {
             initTimeline();
             mixerLoaded = true;
             console.log(sandWispModel);
@@ -860,8 +1005,12 @@ const tick = () => {
         }
     } else {
         // Update animation timing
-        boyMixer.setTime(clock.getElapsedTime());
-        girlMixer.setTime(clock.getElapsedTime());
+        //console.log(mixers)
+        for (let i = 0; i < mixers.length; i++) {
+            mixers[i].setTime(clock.getElapsedTime());
+        }
+        //boyMixer.setTime(clock.getElapsedTime());
+        //girlMixer.setTime(clock.getElapsedTime());
         sandWispModel.rotation.y = clock.getElapsedTime();
     }
 

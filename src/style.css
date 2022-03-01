@@ -61,8 +61,8 @@ body
     
     position: absolute;
     z-index: 5;
-    top: 70vh;
-    left: 10vw;
+    top: 82vh;
+    left: 84vw;
 
     transform-origin: center;
     animation: blink .85s infinite;
@@ -131,6 +131,8 @@ body
     min-width: 30rem;
     max-width: 40rem;
     width: 60vw;
+    
+    text-shadow: 1px 1px 4px rgb(0 0 0 / 56%);
 }
 
 p i {
