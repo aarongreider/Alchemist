@@ -181,7 +181,7 @@ function initObjects() {
         map: windTxt,
         side: THREE.DoubleSide,
         opacity: .25,
-        //alphaMap: windTxt,
+        alphaMap: windTxt,
     });
     mats.push(windMat);
 
@@ -335,6 +335,7 @@ function initObjects() {
     */
     gltfLoader.load(`crystal_heart.gltf`, (gltf) => {
         heartModel = gltf.scene;
+        heartModel.name = `heart`;
 
         //set transforms
         heartModel.scale.set(1, 1, 1);
@@ -365,8 +366,9 @@ function initObjects() {
     /**
     * LOAD BIRDIE GLTF 
     */
-    fbxLoader.load(`birdie_v6.fbx`, function (fbx) {
+    fbxLoader.load(`birdie_v8.fbx`, function (fbx) {
         birdModel = fbx;
+        birdModel.name = `bird`;
 
         //set transforms
         birdModel.scale.set(.0001, .0001, .0001);
@@ -378,11 +380,6 @@ function initObjects() {
             }
         }); */
 
-        // show rig skeleton
-        birdSkeleton = new THREE.SkeletonHelper(boyModel);
-        birdSkeleton.visible = true;
-        scene.add(birdSkeleton);
-
         // add model to scene
         //gltfModels.push(birdModel);
         scene.add(birdModel);
@@ -392,39 +389,15 @@ function initObjects() {
         birdAnimations = fbx.animations;
         mixers.push(birdMixer);
 
-        let fly_NLA = birdMixer.clipAction(fbx.animations[0]);
-        fly_NLA.play();
+        birdModel.activeClip = birdMixer.clipAction(fbx.animations[3]);
+        birdModel.activeClip.play();
+        //let fly_NLA = birdMixer.clipAction(fbx.animations[3]);
+        //fly_NLA.play();
 
-        console.log(fbx.animations[0]);
+        //console.log(fbx.animations);
+
+        //switchGLTFAnims(birdModel, birdMixer.clipAction(fbx.animations[0]))
     });
-
-    /* gltfLoader.load(`birdie_v6-fbx.gltf`, (gltf) => {
-        birdModel = gltf.scene;
-
-        //set transforms
-        birdModel.scale.set(.02, .02, .02);
-
-        // assign material and shadow
-        birdModel.traverse(function (child) {
-            if (child.isMesh) {
-                child.material = glowMat;
-            }
-        });
-
-        // add model to scene
-        gltfModels.push(birdModel);
-        scene.add(birdModel);
-
-        // init animation mixer
-        birdMixer = new THREE.AnimationMixer(birdModel);
-        birdAnimations = gltf.animations;
-        mixers.push(birdMixer);
-
-        let fly_NLA = birdMixer.clipAction(gltf.animations[0]);
-        fly_NLA.play();
-
-        console.log(gltf.animations[0])
-    }); */
 
     /**
     * LOAD BOY GLTF
@@ -432,6 +405,7 @@ function initObjects() {
 
     gltfLoader.load(`boy_v15.gltf`, (gltf) => {
         boyModel = gltf.scene;
+        boyModel.name = `boy`;
 
         //set transforms
         boyModel.scale.set(.1, .1, .1);
@@ -468,18 +442,18 @@ function initObjects() {
         start_walking_NLA = boyMixer.clipAction(gltf.animations[3]);
         walk_cycle_NLA = boyMixer.clipAction(gltf.animations[4]);
 
-        activeClip = walk_cycle_NLA;
-        activeClip.play();
+        boyModel.activeClip = walk_cycle_NLA;
+        boyModel.activeClip.play();
 
         //#region BOY GUI
         const folder1 = gui.addFolder('boy controls');
 
         boyAnimParams = {
-            'sit down': function () { switchGLTFAnims(sitting_NLA) },
-            'walk cycle': function () { switchGLTFAnims(walk_cycle_NLA) },
-            'move position 1': function () { switchGLTFAnims(movePos1_NLA) },
-            'pole walking': function () { switchGLTFAnims(pole_walking_NLA) },
-            'start walking': function () { switchGLTFAnims(start_walking_NLA) }
+            'sit down': function () { switchGLTFAnims(boyModel, sitting_NLA) },
+            'walk cycle': function () { switchGLTFAnims(boyModel, walk_cycle_NLA) },
+            'move position 1': function () { switchGLTFAnims(boyModel, movePos1_NLA) },
+            'pole walking': function () { switchGLTFAnims(boyModel, pole_walking_NLA) },
+            'start walking': function () { switchGLTFAnims(boyModel, start_walking_NLA) }
         }
         folder1.add(boyAnimParams, 'sit down');
         folder1.add(boyAnimParams, 'walk cycle');
@@ -537,14 +511,16 @@ function initObjects() {
 
     //#endregion
 }
-function switchGLTFAnims(newClip) {
-    //console.log(newClip);
-    newClip.enabled = true;
-    newClip.setEffectiveWeight(1);
-    newClip.play();
-    activeClip.crossFadeTo(newClip, .5, false);
+function switchGLTFAnims(model, newClip) {
+    if (model.activeClip != newClip) {
+        console.log(`%c ${model.name}: ${newClip._clip.name}`, `color: DarkGoldenRod`);
+        newClip.enabled = true;
+        newClip.setEffectiveWeight(1);
+        newClip.play();
+        model.activeClip.crossFadeTo(newClip, .5, false);
 
-    activeClip = newClip;
+        model.activeClip = newClip;
+    }
 }
 
 /**
@@ -652,7 +628,7 @@ function initTimeline() {
 
                 gsapT1.clear();
                 gsapT1.call(function () {
-                    if (activeClip != sitting_NLA) { switchGLTFAnims(sitting_NLA) }
+                    switchGLTFAnims(boyModel, sitting_NLA);
                 })
 
                 //initial camera pos
@@ -686,7 +662,7 @@ function initTimeline() {
             function () {
                 gsapT1.clear();
                 gsapT1.call(function () {
-                    if (activeClip != sitting_NLA) { switchGLTFAnims(sitting_NLA) }
+                    switchGLTFAnims(boyModel, sitting_NLA);
                 })
                 mats.forEach(mat => {
                     gsapT1.to(mat, { duration: .5, opacity: 0 }, '<');
@@ -725,7 +701,7 @@ function initTimeline() {
             function () {
                 gsapT1.clear();
                 gsapT1.call(function () {
-                    if (activeClip != sitting_NLA) { switchGLTFAnims(sitting_NLA) }
+                    switchGLTFAnims(boyModel, sitting_NLA);
                 });
 
                 // make this fade out girl at some point
@@ -764,7 +740,7 @@ function initTimeline() {
             function () {
                 gsapT1.clear();
                 gsapT1.call(function () {
-                    if (activeClip != sitting_NLA) { switchGLTFAnims(sitting_NLA) }
+                    switchGLTFAnims(boyModel, sitting_NLA);
                 })
                 gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z + 6 });
                 gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z });
@@ -785,6 +761,42 @@ function initTimeline() {
                     camera.lookAt(new THREE.Vector3(0, .5, 0));
                 })
                 //heart fade in and rotate
+
+            }
+        ),
+        new timelineObj(
+            'bird glides in', -1,
+            [birdModel],
+            function () {
+                gsapT1.clear();
+
+                gsapT1.to(camera.position, { duration: 0, x: 0 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, y: .55 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, z: -2 }, `<`);
+                gsapT1.call(function () {
+                    camera.lookAt(new THREE.Vector3(0, .5, 0));
+                })
+
+                // bird flap
+                gsapT1.call(function () {
+                    switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[2]))
+                })
+
+                // filler
+                gsapT1.to(sphereMesh.position, { duration: 5, x: sphereMesh.position }); //filler
+
+                gsapT1.call(function () {
+                    switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
+                })
+
+                // filler
+                gsapT1.to(sphereMesh.position, { duration: 3, x: sphereMesh.position }); //filler
+
+                gsapT1.call(function () {
+                    switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
+                })
+
+
 
             }
         ),
@@ -1016,7 +1028,6 @@ const tick = () => {
         }
         //boyMixer.setTime(clock.getElapsedTime());
         //girlMixer.setTime(clock.getElapsedTime());
-        birdMixer.setTime(clock.getElapsedTime());
         sandWispModel.rotation.y = clock.getElapsedTime();
     }
 
