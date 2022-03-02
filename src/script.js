@@ -78,7 +78,7 @@ startButton.addEventListener("click", function () {
 let effectComposer, renderPass, bloomPass;
 let axesHelper;
 
-let settings;
+let boyAnimParams;
 let mats = [];
 let gltfModels = [];
 let mixers = [];
@@ -87,7 +87,7 @@ let windVideo;
 let boxMesh, sphereMesh, pointsMesh;
 let boyMixer, girlMixer, heartMixer, birdMixer;
 let boyAnimations, girlAnimations, heartAnimations, birdAnimations;
-let skeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel, flowerModel, heartModel, heartPointsModel, birdModel;
+let boySkeleton, birdSkeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel, flowerModel, heartModel, heartPointsModel, birdModel;
 let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
 let blow_kiss_NLA, spin_NLA;
 
@@ -369,14 +369,19 @@ function initObjects() {
         birdModel = fbx;
 
         //set transforms
-        birdModel.scale.set(.02, .02, .02);
+        birdModel.scale.set(.0001, .0001, .0001);
 
         // assign material and shadow
-        birdModel.traverse(function (child) {
+        /* birdModel.traverse(function (child) {
             if (child.isMesh) {
                 child.material = glowMat;
             }
-        });
+        }); */
+
+        // show rig skeleton
+        birdSkeleton = new THREE.SkeletonHelper(boyModel);
+        birdSkeleton.visible = true;
+        scene.add(birdSkeleton);
 
         // add model to scene
         //gltfModels.push(birdModel);
@@ -448,8 +453,8 @@ function initObjects() {
         //console.log(gltfModels)
 
         // show rig skeleton
-        skeleton = new THREE.SkeletonHelper(boyModel);
-        skeleton.visible = true;
+        /* boySkeleton = new THREE.SkeletonHelper(boyModel);
+        boySkeleton.visible = true; */
         //scene.add(skeleton);
 
         // init animation mixer
@@ -469,18 +474,18 @@ function initObjects() {
         //#region BOY GUI
         const folder1 = gui.addFolder('boy controls');
 
-        settings = {
+        boyAnimParams = {
             'sit down': function () { switchGLTFAnims(sitting_NLA) },
             'walk cycle': function () { switchGLTFAnims(walk_cycle_NLA) },
             'move position 1': function () { switchGLTFAnims(movePos1_NLA) },
             'pole walking': function () { switchGLTFAnims(pole_walking_NLA) },
             'start walking': function () { switchGLTFAnims(start_walking_NLA) }
         }
-        folder1.add(settings, 'sit down');
-        folder1.add(settings, 'walk cycle');
-        folder1.add(settings, 'move position 1');
-        folder1.add(settings, 'pole walking');
-        folder1.add(settings, 'start walking');
+        folder1.add(boyAnimParams, 'sit down');
+        folder1.add(boyAnimParams, 'walk cycle');
+        folder1.add(boyAnimParams, 'move position 1');
+        folder1.add(boyAnimParams, 'pole walking');
+        folder1.add(boyAnimParams, 'start walking');
 
         //#endregion
     });
@@ -533,7 +538,7 @@ function initObjects() {
     //#endregion
 }
 function switchGLTFAnims(newClip) {
-    console.log(newClip);
+    //console.log(newClip);
     newClip.enabled = true;
     newClip.setEffectiveWeight(1);
     newClip.play();
@@ -1011,6 +1016,7 @@ const tick = () => {
         }
         //boyMixer.setTime(clock.getElapsedTime());
         //girlMixer.setTime(clock.getElapsedTime());
+        birdMixer.setTime(clock.getElapsedTime());
         sandWispModel.rotation.y = clock.getElapsedTime();
     }
 
