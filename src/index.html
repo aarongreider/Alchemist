@@ -108,6 +108,28 @@
 
 			}
     </script>
+    
+    <!-- particles -->
+    <script id="vertexParticleShader" type="x-shader/x-vertex">
+        uniform float pointMultiplier;
+    
+    	void main()	{
+    		vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+            gl_Position = projectionMatrix * mvPosition;
+            gl_PointSize = pointMultiplier / gl_Position.w;
+    	}
+    </script>
+
+    <script id="fragmentSimulation" type="x-shader/x-fragment">
+                    uniform sampler2D sampleTxt;
+        
+                    void main() { 
+                        gl_FragColor = texture2D(sampleTxt, gl_PointCoord);
+                    }
+        </script>
+
+
+
 
     <div id="cursor">
 

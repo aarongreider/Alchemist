@@ -892,6 +892,7 @@ function initTimeline() {
                 })
                 //#endregion
 
+                //#region rejected points bird
                 // bird to points
                 /* let birdPointsMat = new THREE.PointsMaterial()
                 let birdGeo = birdModel.getObjectByName('Raven Poly Art_01 - Default_0');
@@ -904,11 +905,12 @@ function initTimeline() {
                         };
                     });
                 }); */
+                //#endregion
 
                 //#region POINTS
-                const vertices = [];
+                let vertices = [];
 
-                for (let i = 0; i < 10000; i++) {
+                for (let i = 0; i < 5000; i++) {
                     const x = THREE.MathUtils.randFloatSpread(1);
                     const y = THREE.MathUtils.randFloatSpread(1);
                     const z = THREE.MathUtils.randFloatSpread(1);
@@ -916,8 +918,9 @@ function initTimeline() {
                     vertices.push(x, y, z);
                 }
 
-                const buffGeometry = new THREE.BufferGeometry();
+                /* const buffGeometry = new THREE.BufferGeometry();
                 buffGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                buffGeometry.attributes.position.needsUpdate = true; */
 
                 const material = new THREE.PointsMaterial({
                     color: 0x888888,
@@ -925,12 +928,42 @@ function initTimeline() {
                     transparent: true,
                     opacity: 0,
                 });
+                /* const points = new THREE.Points(buffGeometry, material); */
 
-                const points = new THREE.Points(buffGeometry, material);
+
+                let points = new THREE.Points(
+                    new THREE.BufferGeometry().setAttribute('position',
+                        new THREE.Float32BufferAttribute(vertices, 3)), material);
 
                 scene.add(points);
                 points.layers.set(activeSceneNum);
 
+
+                class particleSystem {
+                    constructor(_geometry, _uniforms, _vertices) {
+                        this._geometry = geometry;
+                        this._vertices = vertices;
+
+                        this._material = new THREE.ShaderMaterial({
+                            uniforms: _uniforms,
+                            vertexShader: document.getElementById(`vertexParticleShader`),
+                            fragmentShader: document.getElementById(`fragmentSimulation`),
+                        });
+
+                        this._points = new THREE.Points(_geometry, _material);
+                        this.updateGeometry()
+                    }
+
+                    updateGeometry() {
+
+                        this._geometry.setAttribute('position', new THREE.Float32BufferAttribute(this._vertices, 3));
+                        this._geometry.attributes.position.needsUpdate = true;
+                    }
+
+                    updateParticles() {
+
+                    }
+                }
                 //#endregion
 
                 //camera pan
@@ -940,6 +973,46 @@ function initTimeline() {
 
                 gsapT1.to(rotObj.rotation, { duration: 18, ease: "linear", y: 6.28319 });
                 gsapT1.to(material, { duration: 1, opacity: 1 }, '<');
+
+                //move particles in random direction and update buffer
+                //console.log(vertices);
+
+                /* gsapT1.to({}, {
+                    duration: 5, ease: "power2.inOut",
+                    onUpdate: function () {
+                        //fromVal.lerp(toVal, this.progress());
+                        vertices.forEach(vertex => {
+                            vertex += Math.random();
+                        });
+                        buffGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                        buffGeometry.attributes.position.needsUpdate = true;
+                        console.log(this.progress());
+                    }
+                }, `<`); */
+                gsapT1.to({}, {
+                    duration: 5, ease: "power2.inOut",
+                    onUpdate: function () {
+                        scene.remove(points);
+                        //fromVal.lerp(toVal, this.progress());
+                        vertices = [];
+
+                        for (let i = 0; i < 5000; i++) {
+                            const x = THREE.MathUtils.randFloatSpread(1);
+                            const y = THREE.MathUtils.randFloatSpread(1);
+                            const z = THREE.MathUtils.randFloatSpread(1);
+
+                            vertices.push(x, y, z);
+                        }
+
+                        points = new THREE.Points(
+                            new THREE.BufferGeometry().setAttribute('position',
+                                new THREE.Float32BufferAttribute(vertices, 3)), material);
+
+                        scene.add(points);
+                        points.layers.set(activeSceneNum);
+                        console.log(this.progress());
+                    }
+                }, `<`);
             }
         ),
     );
