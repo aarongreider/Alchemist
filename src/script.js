@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'dat.gui'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-import { AnimationMixer, BlendingSrcFactor, DstAlphaFactor, OneFactor, PCFShadowMap, SkeletonHelper, SrcAlphaFactor, SubtractEquation } from 'three'
+import { AnimationMixer, BlendingSrcFactor, DstAlphaFactor, Object3D, OneFactor, PCFShadowMap, SkeletonHelper, SrcAlphaFactor, SubtractEquation } from 'three'
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { SelectiveBloomEffect, BloomEffect, EffectComposer, EffectPass, RenderPass } from "postprocessing";
 /* import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -307,7 +307,7 @@ function initObjects() {
     /**
      * LOAD FLOWER GLTF 
      */
-    gltfLoader.load(`desert_flower_v3.gltf`, (gltf) => {
+    gltfLoader.load(`desert_flower_v4.gltf`, (gltf) => {
         flowerModel = gltf.scene;
 
         //set transforms
@@ -621,7 +621,7 @@ function initTimeline() {
     timelineClips.push(
         new timelineObj(
             'zoom through rocks to flower', 0,
-            [birdModel, flowerModel, boyModel, sandWispModel],
+            [flowerModel, boyModel, sandWispModel],
             function () {
                 //camera.rotation.x += (Math.PI / 180);
                 //camera.rotateOnWorldAxis(new THREE.Vector3(0.0, 1.0, 0.0), 3)
@@ -765,39 +765,181 @@ function initTimeline() {
             }
         ),
         new timelineObj(
-            'bird glides in', -1,
+            'bird glides in', 0,
             [birdModel],
             function () {
                 gsapT1.clear();
+                gsapT1_2.clear();
 
-                gsapT1.to(camera.position, { duration: 0, x: 0 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, x: .25 }, `<`);
                 gsapT1.to(camera.position, { duration: 0, y: .55 }, `<`);
-                gsapT1.to(camera.position, { duration: 0, z: -2 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, z: -1 }, `<`);
                 gsapT1.call(function () {
-                    camera.lookAt(new THREE.Vector3(0, .5, 0));
+                    camera.lookAt(new THREE.Vector3(0, 0, 0));
                 })
 
                 // bird flap
-                gsapT1.call(function () {
+                gsapT1_2.call(function () {
                     switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[2]))
                 })
 
                 // filler
-                gsapT1.to(sphereMesh.position, { duration: 5, x: sphereMesh.position }); //filler
+                gsapT1_2.to(sphereMesh.position, { duration: 5, x: sphereMesh.position }); //filler
 
-                gsapT1.call(function () {
+                gsapT1_2.call(function () {
                     switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
                 })
 
                 // filler
-                gsapT1.to(sphereMesh.position, { duration: 3, x: sphereMesh.position }); //filler
+                gsapT1_2.to(sphereMesh.position, { duration: 3, x: sphereMesh.position }); //filler
 
-                gsapT1.call(function () {
+                gsapT1_2.call(function () {
                     switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
                 })
 
+                // false = fade out | true = custom transition handler
+                gsapT1.call(function () { fadeOverride = true });
+
+            }
+        ),
+        new timelineObj(
+            'camera pans around bird', -1,
+            [birdModel, flowerModel, axesHelper,],
+            function () {
+                gsapT1.clear();
+                gsapT1_2.clear();
+
+                gsapT1.to(camera.position, { duration: 0, x: .25 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, y: .55 }, `<`);
+                gsapT1.to(camera.position, { duration: 0, z: -1 }, `<`);
+                gsapT1.call(function () {
+                    camera.lookAt(new THREE.Vector3(0, 0, 0));
+                })
+
+                flowerModel.position.y = -10;
+
+                //#region bird flap
+                gsapT1_2.call(function () {
+                    switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[2]))
+                })
+
+                // filler
+                gsapT1_2.to(sphereMesh.position, { duration: (Math.random() * 5 + 2), x: sphereMesh.position }); //filler
+
+                gsapT1_2.call(function () {
+                    switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
+                })
+
+                // filler
+                gsapT1_2.to(sphereMesh.position, { duration: (Math.random() * 5 + 1), x: sphereMesh.position }); //filler
+
+                gsapT1_2.call(function () {
+                    switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
+                })
+                //#endregion
 
 
+                //camera pan
+                //make new object 3d
+                //make camera a child of rotObj
+                let rotObj = new Object3D();
+                scene.add(rotObj);
+                rotObj.add(camera);
+
+                gsapT1.to(rotObj.rotation, { duration: 18, ease: "linear", y: 6.28319 });
+
+
+                // false = fade out | true = custom transition handler
+                gsapT1.call(function () { fadeOverride = true });
+
+            }
+        ),
+        new timelineObj(
+            'bird is sand', -1,
+            [birdModel],
+            function () {
+                gsapT1.clear();
+                gsapT1_2.clear();
+
+                //init pos
+                gsapT1.to(camera.position, { duration: 2, x: .25 }, `<`);
+                gsapT1.to(camera.position, { duration: 2, y: .25 }, `<`);
+                gsapT1.to(camera.position, {
+                    duration: 2, ease: "power2.inOut", z: -.25,
+                    onUpdate: function () {
+                        camera.lookAt(new THREE.Vector3(0, 0, 0));
+                    }
+                }, `<`);
+
+
+                //#region bird flap
+                gsapT1_2.call(function () {
+                    switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[2]))
+                })
+
+                // filler
+                gsapT1_2.to(sphereMesh.position, { duration: (Math.random() * 5 + 2), x: sphereMesh.position }); //filler
+
+                gsapT1_2.call(function () {
+                    switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
+                })
+
+                // filler
+                gsapT1_2.to(sphereMesh.position, { duration: (Math.random() * 5 + 1), x: sphereMesh.position }); //filler
+
+                gsapT1_2.call(function () {
+                    switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
+                })
+                //#endregion
+
+                // bird to points
+                /* let birdPointsMat = new THREE.PointsMaterial()
+                let birdGeo = birdModel.getObjectByName('Raven Poly Art_01 - Default_0');
+                let birdPoints = new THREE.Points(birdGeo, birdPointsMat) */
+
+                /* gsapT1.call(function () {
+                    birdModel.traverse(child => {
+                        if (child.isMesh) {
+                            child.material = material;
+                        };
+                    });
+                }); */
+
+                //#region POINTS
+                const vertices = [];
+
+                for (let i = 0; i < 10000; i++) {
+                    const x = THREE.MathUtils.randFloatSpread(1);
+                    const y = THREE.MathUtils.randFloatSpread(1);
+                    const z = THREE.MathUtils.randFloatSpread(1);
+
+                    vertices.push(x, y, z);
+                }
+
+                const buffGeometry = new THREE.BufferGeometry();
+                buffGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+                const material = new THREE.PointsMaterial({
+                    color: 0x888888,
+                    size: .0025,
+                    transparent: true,
+                    opacity: 0,
+                });
+
+                const points = new THREE.Points(buffGeometry, material);
+
+                scene.add(points);
+                points.layers.set(activeSceneNum);
+
+                //#endregion
+
+                //camera pan
+                let rotObj = new Object3D();
+                scene.add(rotObj);
+                rotObj.add(camera);
+
+                gsapT1.to(rotObj.rotation, { duration: 18, ease: "linear", y: 6.28319 });
+                gsapT1.to(material, { duration: 1, opacity: 1 }, '<');
             }
         ),
     );
