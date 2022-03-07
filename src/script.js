@@ -6,10 +6,11 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'dat.gui'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-import { AnimationMixer, BlendingSrcFactor, DstAlphaFactor, Object3D, OneFactor, PCFShadowMap, SkeletonHelper, SrcAlphaFactor, SubtractEquation } from 'three'
+import { AnimationMixer, BlendingSrcFactor, DstAlphaFactor, MathUtils, Object3D, OneFactor, PCFShadowMap, SkeletonHelper, SrcAlphaFactor, SubtractEquation } from 'three'
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { SelectiveBloomEffect, BloomEffect, EffectComposer, EffectPass, RenderPass } from "postprocessing";
 import { Water } from 'three/examples/jsm/objects/Water2.js';
+//import { Water } from 'three/examples/jsm/objects/Water.js';
 import { Refractor } from 'three/examples/jsm/objects/Refractor.js';
 import { Reflector } from 'three/examples/jsm/objects/Reflector.js';
 /* import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -88,9 +89,9 @@ let mixers = [];
 
 let windVideo;
 let boxMesh, sphereMesh, pointsMesh;
-let boyMixer, girlMixer, heartMixer, birdMixer;
-let boyAnimations, girlAnimations, heartAnimations, birdAnimations;
-let boySkeleton, birdSkeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel, flowerModel, heartModel, heartPointsModel, birdModel;
+let boyMixer, girlMixer, heartMixer, birdMixer, bird2Mixer;
+let boyAnimations, girlAnimations, heartAnimations, birdAnimations, bird2Animations;
+let boySkeleton, birdSkeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel, flowerModel, heartModel, heartPointsModel, birdModel, bird2Model;
 let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
 let blow_kiss_NLA, spin_NLA;
 
@@ -132,7 +133,7 @@ function initObjects() {
     // Geometry
     const boxGeo = new THREE.BoxGeometry(1, 1, 1);
     const sphereGeo = new THREE.SphereGeometry(.5, 100, 100);
-    const pointsGeo = new THREE.SphereGeometry(.1, 10, 10);
+    const pointsGeo = new THREE.SphereGeometry(1, 10, 10);
 
     //  Textures
     const checkTxt = txtLoader.load(`https://threejsfundamentals.org/threejs/resources/images/checker.png`);
@@ -197,7 +198,7 @@ function initObjects() {
 
     const pointsMat = new THREE.PointsMaterial({
         transparent: true,
-        size: .0001,
+        size: .0005,
     })
 
     const glowMat = new THREE.MeshStandardMaterial({
@@ -384,7 +385,7 @@ function initObjects() {
         }); */
 
         // add model to scene
-        //gltfModels.push(birdModel);
+        gltfModels.push(birdModel);
         scene.add(birdModel);
 
         // init animation mixer
@@ -400,6 +401,40 @@ function initObjects() {
         //console.log(fbx.animations);
 
         //switchGLTFAnims(birdModel, birdMixer.clipAction(fbx.animations[0]))
+    });
+
+    fbxLoader.load(`birdie_v8.fbx`, function (fbx) {
+        bird2Model = fbx;
+        bird2Model.name = `bird2`;
+
+        //set transforms
+        bird2Model.scale.set(.0001, .0001, .0001);
+        bird2Model.position.set(0, 2, -2);
+
+        // assign material and shadow
+        bird2Model.traverse(function (child) {
+            if (child.isMesh) {
+                child.material = glowMat;
+            }
+        });
+
+        // add model to scene
+        gltfModels.push(bird2Model);
+        scene.add(bird2Model);
+
+        // init animation mixer
+        bird2Mixer = new THREE.AnimationMixer(bird2Model);
+        bird2Animations = fbx.animations;
+        mixers.push(bird2Mixer);
+
+        bird2Model.activeClip = bird2Mixer.clipAction(fbx.animations[3]);
+        bird2Model.activeClip.play();
+        //let fly_NLA = bird2Mixer.clipAction(fbx.animations[3]);
+        //fly_NLA.play();
+
+        //console.log(fbx.animations);
+
+        //switchGLTFAnims(bird2Model, bird2Mixer.clipAction(fbx.animations[0]))
     });
 
     /**
@@ -1020,7 +1055,7 @@ function initTimeline() {
             }
         ),
         new timelineObj(
-            'bird is water', -1,
+            'bird is water2', -1,
             [birdModel],
             function () {
                 gsapT1.clear();
@@ -1028,14 +1063,16 @@ function initTimeline() {
 
                 //init pos
                 gsapT1.to(camera.position, { duration: 2, x: .25 }, `<`);
-                gsapT1.to(camera.position, { duration: 2, y: .25 }, `<`);
+                gsapT1.to(camera.position, { duration: 2, y: .5 }, `<`);
                 gsapT1.to(camera.position, {
-                    duration: 2, ease: "power2.inOut", z: -.25,
+                    duration: 2, ease: "power2.inOut", z: -2,
                     onUpdate: function () {
-                        camera.lookAt(new THREE.Vector3(0, 0, 0));
+                        camera.lookAt(new THREE.Vector3(0, -2, 0));
                     }
                 }, `<`);
 
+                gsapT1.to(birdModel.position, { duration: 2, y: -2 }, `<`);
+                gsapT1.to(birdModel.rotation, { duration: 2, y: degToRad(180) }, `<`);
 
                 //#region bird flap
                 gsapT1_2.call(function () {
@@ -1061,7 +1098,7 @@ function initTimeline() {
                 let rotObj = new Object3D();
                 scene.add(rotObj);
                 rotObj.add(camera);
-                gsapT1.to(rotObj.rotation, { duration: 18, ease: "linear", y: 6.28319 });
+                gsapT1.to(rotObj.rotation, { duration: 18, ease: "linear", y: degToRad(360) });
 
 
                 //#region WATER
@@ -1069,22 +1106,65 @@ function initTimeline() {
                 const waterGeometry = new THREE.PlaneGeometry(20, 20);
                 const flowMap = txtLoader.load('textures/water/Water_1_M_Flow.jpg');
 
-                let water = new Water(waterGeometry, {
-                    scale: 10,
+                // water2.jsm
+                let water2 = new Water(waterGeometry, {
+                    scale: 0,
                     textureWidth: 1024,
                     textureHeight: 1024,
-                    flowMap: flowMap
+                    flowMap: flowMap,
                 });
 
-                water.position.y = 0;
-                water.rotation.x = degToRad(90);
+                water2.position.y = 0;
+                water2.rotation.x = degToRad(270);
 
-                water.layers.set(activeSceneNum);
-                scene.add(water);
+                scene.add(water2);
 
+                //#region water.jsm
+                /* let water = new Water(
+                    waterGeometry,
+                    {
+                        textureWidth: 1024,
+                        textureHeight: 1024,
+                        waterNormals: txtLoader.load('textures/water/Water_1_M_Normal.jpg', function (texture) {
+                            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                        }),
+                        //sunDirection: new THREE.Vector3(.25, .5, .25),
+                        sunColor: 0xffffff,
+                        waterColor: 0x000000,
+                        distortionScale: 0.25,
+                        //fog: scene.fog !== undefined
+                    }
+                );
+
+                water.position.y = -0.25;
+                water.rotation.x = degToRad(270);
+
+                scene.add(water); */
+
+                //water.layers.set(activeSceneNum);
                 //#endregion
 
-                //fade everything out except for the bird
+                scene.traverse(child => {
+                    if (child instanceof THREE.Mesh) {
+                        child.layers.disableAll();
+                    }
+                });
+                let obj = { 'actors': [water2, birdModel, bird2Model] };
+                assignLayers(obj, 0);
+
+
+                //T1 to animate scale of water
+                let valFrom = water2.material.uniforms['config'].value.w;
+                let valTo = 5
+                gsapT1.to({}, {
+                    duration: 2, ease: "power2.inOut",
+                    onUpdate: function () {
+                        water2.material.uniforms['config'].value.w = MathUtils.lerp(valFrom, valTo, this.progress());
+                        //console.log(`water scale ` + this.progress());
+                    }
+                });
+
+                //#endregion
             }
         ),
     );
@@ -1136,27 +1216,8 @@ function advanceScene() {
     }
 }
 
-function fadeMats(materials, models, opacity, duration) {
-    console.log(`%c fade mats, o: ${opacity}, d: ${duration}`, `color: #B5B5B5`);
-
-    materials.forEach(mat => {
-        gsapT3.to(mat, { duration: duration, opacity: opacity }, '<');
-    });
-
-    models.forEach(model => {
-        model.traverse(child => {
-            if (child.material) {
-                child.material.transparent = true;
-                gsapT3.to(child.material, { duration: duration, opacity: opacity }, '<');
-            };
-        });
-    });
-}
-
-
 function playScene(sceneObj, layerNum) {
     console.log(`%c active scene: ${layerNum} ${sceneObj.name}`, 'color: #1BA5D8');
-    //console.log(sceneObj);
 
     gsapT3.clear();
     //gsapT1.progress(0);
@@ -1207,6 +1268,23 @@ function assignLayers(sceneObj, layerNum) {
 
     }
     camera.layers.set(layerNum);
+}
+
+function fadeMats(materials, models, opacity, duration) {
+    console.log(`%c fade mats, o: ${opacity}, d: ${duration}`, `color: #B5B5B5`);
+
+    materials.forEach(mat => {
+        gsapT3.to(mat, { duration: duration, opacity: opacity }, '<');
+    });
+
+    models.forEach(model => {
+        model.traverse(child => {
+            if (child.material) {
+                child.material.transparent = true;
+                gsapT3.to(child.material, { duration: duration, opacity: opacity }, '<');
+            };
+        });
+    });
 }
 
 function degToRad(deg) {
