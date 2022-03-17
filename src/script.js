@@ -417,6 +417,7 @@ function initObjects() {
 
         //set transforms
         bird2Model.scale.set(.0001, .0001, .0001);
+        bird2Model.position.set(1, 3, -2);
 
         // assign material and shadow
         /* bird2Model.traverse(function (child) {
@@ -1207,26 +1208,42 @@ function initTimeline() {
                 //T1 to animate scale of water
                 let valFrom = 0;
                 let valTo = .75;
-                gsapT1.to({}, {
-                    duration: 8, ease: "power2.inOut",
-                    onUpdate: function () {
-                        water.material.uniforms['config'].value.w = MathUtils.lerp(valFrom, valTo, this.progress());
-                        //console.log(`water scale ` + this.progress());
-                    }
-                }, '<');
+                gsapT1.call(function () {
+                    gsapT3.clear();
+                    gsapT3.to({}, {
+                        duration: 8, ease: "power2.inOut",
+                        onUpdate: function () {
+                            water.material.uniforms['config'].value.w = MathUtils.lerp(valFrom, valTo, this.progress());
+                            //console.log(`water scale ` + this.progress());
+                        }, onComplete: function () {
+                            console.log(`completed water scale`)
+                        },
+                    })
+                });
 
 
                 // filler
-                gsapT1.to(sphereMesh.position, { duration: .5, x: sphereMesh.position }); //filler
+                gsapT1.to(sphereMesh.position, {
+                    duration: .5, x: sphereMesh.position, onComplete: function () {
+                        console.log(`completed filler`)
+                    },
+                }, `<`); //filler
 
                 // reset and play fish animation once faded in
                 gsapT1.call(function () {
                     fishModel.activeClip.reset();
                     //fishModel.activeClip.loop = THREE.LoopOnce;
-                    fishModel.clampWhenFinished = true;
+                    //fishModel.clampWhenFinished = true;
                     fishModel.activeClip.paused = false;
                     fishModel.activeClip.play();
                 });
+
+                // filler
+                gsapT1.to(sphereMesh.position, {
+                    duration: .5, x: sphereMesh.position, onComplete: function () {
+                        console.log(`completed filler 2`)
+                    },
+                }); //filler
 
                 // fade in fish
                 gsapT1.to(mats[mats.length - 1], {
@@ -1238,8 +1255,25 @@ function initTimeline() {
 
                 //fade out fish when bird2 position intersects
 
-                gsapT1.to(fishModel.position, { duration: 2, z: 10 }, `>5`);
-                //gsapT1.to(bird2Model.position, { duration: 2, z: 10 }, `>5`);
+                // filler
+                gsapT1.to(sphereMesh.position, { duration: 4, x: sphereMesh.position }); // filler
+
+                //pause fish action after duration is over
+                gsapT1.call(function () {
+                    fishModel.activeClip.paused = true;
+                });
+
+                // filler
+                gsapT1.to(sphereMesh.position, { duration: 4, x: sphereMesh.position }); // filler
+
+                //pause fish action after duration is over
+                gsapT1.call(function () {
+                    fishModel.activeClip.paused = false;
+                });
+
+                /* gsapT1.to(fishModel.position, { duration: 10, z: 5 });
+                gsapT1.to(bird2Model.position, { duration: 5, y: 0.25 }, `<`);
+                gsapT1.to(bird2Model.position, { duration: 10, z: 5 }, `<`); */
 
             }
         ),
@@ -1458,10 +1492,13 @@ const tick = () => {
     } else {
         // Update animation timing
         //console.log(mixers)
+        let mixerUpdateDelta = clock.getDelta();
         for (let i = 0; i < mixers.length; i++) {
-            mixers[i].setTime(clock.getElapsedTime());
+            mixers[i].update(mixerUpdateDelta);
+            //mixers[i].setTime(clock.getElapsedTime());
             //mixers[i].setTime(mixers[i].time + clock.getDelta());
             //mixers[i].update(clock.getDelta());
+
             //console.log(`${mixers[i].time}  ${clock.getDelta()}  ${clock.getElapsedTime()}`);
         }
         sandWispModel.rotation.y = clock.getElapsedTime();
