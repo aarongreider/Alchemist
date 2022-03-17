@@ -89,10 +89,11 @@ let mixers = [];
 
 let windVideo;
 let boxMesh, sphereMesh, pointsMesh, water;
-let boyMixer, girlMixer, heartMixer, birdMixer, bird2Mixer;
-let boyAnimations, girlAnimations, heartAnimations, birdAnimations, bird2Animations;
-let boySkeleton, birdSkeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel, flowerModel, heartModel, heartPointsModel, birdModel, bird2Model;
-let activeClip, pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
+let boyMixer, girlMixer, heartMixer, birdMixer, bird2Mixer, fishMixer;
+let boyAnimations, girlAnimations, heartAnimations, birdAnimations, bird2Animations, fishAnimations;
+let boySkeleton, birdSkeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel;
+let flowerModel, heartModel, heartPointsModel, birdModel, bird2Model, fishModel;
+let pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
 let blow_kiss_NLA, spin_NLA;
 
 let allNarration, activeSceneNum = 0;
@@ -158,6 +159,7 @@ function initObjects() {
         color: 0xffffff,
         side: THREE.DoubleSide
     });
+    phongMat.name = `phong mat`;
     mats.push(phongMat);
 
     const txtMat = new THREE.MeshBasicMaterial({
@@ -170,6 +172,7 @@ function initObjects() {
         opacity: .5,
         transparent: true,
     });
+    wireMat.name = `wireframe mat`;
     mats.push(wireMat);
 
     const sandWispMat = new THREE.MeshBasicMaterial({
@@ -179,6 +182,7 @@ function initObjects() {
         alphaMap: wispTxtAlpha,
         transparent: true,
     })
+    sandWispMat.name = `sand wisp mat`;
     mats.push(sandWispMat);
 
     const windMat = new THREE.MeshBasicMaterial({
@@ -188,6 +192,7 @@ function initObjects() {
         opacity: .25,
         alphaMap: windTxt,
     });
+    windMat.name = `wind video mat`
     mats.push(windMat);
 
     const flowerMat = new THREE.MeshBasicMaterial({
@@ -195,6 +200,7 @@ function initObjects() {
         side: THREE.DoubleSide,
         transparent: true,
     });
+    flowerMat.name = `flower mat`;
     mats.push(flowerMat);
 
     const pointsMat = new THREE.PointsMaterial({
@@ -208,6 +214,7 @@ function initObjects() {
         //emissiveIntensity: 10,
         transparent: true,
     });
+    glowMat.name = `glow mat`;
     mats.push(glowMat);
 
     // Shader Materials
@@ -404,21 +411,19 @@ function initObjects() {
         //switchGLTFAnims(birdModel, birdMixer.clipAction(fbx.animations[0]))
     });
 
-    gltfLoader.load(`fibshOver_v2.glb`, function (glb) {
-        bird2Model = glb.scene;
+    fbxLoader.load(`birdie_v8.fbx`, function (fbx) {
+        bird2Model = fbx;
         bird2Model.name = `bird2`;
 
         //set transforms
-        bird2Model.scale.set(.1, .1, .1);
-        bird2Model.position.set(0, 0, 0);
-        bird2Model.rotation.set(0, degToRad(180), 0);
+        bird2Model.scale.set(.0001, .0001, .0001);
 
         // assign material and shadow
-        bird2Model.traverse(function (child) {
+        /* bird2Model.traverse(function (child) {
             if (child.isMesh) {
                 child.material = glowMat;
             }
-        });
+        }); */
 
         // add model to scene
         gltfModels.push(bird2Model);
@@ -426,13 +431,47 @@ function initObjects() {
 
         // init animation mixer
         bird2Mixer = new THREE.AnimationMixer(bird2Model);
-        bird2Animations = glb.animations;
+        bird2Animations = fbx.animations;
         mixers.push(bird2Mixer);
-        // 4 and 6
-        bird2Model.activeClip = bird2Mixer.clipAction(glb.animations[0]);
-        //bird2Model.activeClip.play();
 
-        /* var action = bird2Mixer.clipAction(glb.animations[0]);
+        bird2Model.activeClip = bird2Mixer.clipAction(fbx.animations[3]);
+        bird2Model.activeClip.play();
+
+        //console.log(fbx.animations);
+
+        //switchGLTFAnims(bird2Model, bird2Mixer.clipAction(fbx.animations[0]))
+    });
+
+    gltfLoader.load(`fibshOver_v2.glb`, function (glb) {
+        fishModel = glb.scene;
+        fishModel.name = `fibsh`;
+
+        //set transforms
+        fishModel.scale.set(.1, .1, .1);
+        fishModel.position.set(0, .25, -1);
+        fishModel.rotation.set(0, degToRad(180), 0);
+
+        // assign material and shadow
+        fishModel.traverse(function (child) {
+            if (child.isMesh) {
+                child.material = glowMat;
+            }
+        });
+
+        // add model to scene
+        gltfModels.push(fishModel);
+        scene.add(fishModel);
+
+        // init animation mixer
+        fishMixer = new THREE.AnimationMixer(fishModel);
+        fishAnimations = glb.animations;
+        mixers.push(fishMixer);
+        // 4 and 6
+        fishModel.activeClip = fishMixer.clipAction(glb.animations[0]);
+        fishModel.activeClip.play();
+        fishModel.activeClip.paused = true;
+
+        /* var action = fishMixer.clipAction(glb.animations[0]);
         action.loop = THREE.LoopOnce; */
 
         //console.log(glb.animations);)
@@ -554,7 +593,7 @@ function initObjects() {
         flowMap: flowMap,
     });
 
-    water.position.y = 0;
+    water.position.y = .5;
     water.rotation.x = degToRad(270);
 
     scene.add(water);
@@ -1063,6 +1102,7 @@ function initTimeline() {
                 gsapT1_2.clear();
 
                 // disable all layers and set active to layer 0
+                // TODO: toggle this part off for cool reflection|layer exploit
                 scene.traverse(child => {
                     if (child instanceof THREE.Mesh) {
                         child.layers.disableAll();
@@ -1105,7 +1145,8 @@ function initTimeline() {
 
 
                 //slowly move bird1 below water
-                gsapT1.to(birdModel.position, { duration: 5, y: -.25 });
+                //gsapT1.to(birdModel.position, { duration: 5, y: -.25 });
+
                 //gsapT1.to(birdModel.rotation, { duration: 3, x: degToRad(180) }, `<`);
 
                 //T1 to animate scale of water
@@ -1123,18 +1164,23 @@ function initTimeline() {
         ),
         new timelineObj(
             'bird2 flies away with fish', 0,
-            [birdModel, bird2Model, water],
+            [birdModel, water],
             function () {
                 gsapT1.clear();
                 gsapT1_2.clear();
 
+                // fade out fish
+                gsapT1.to(mats[mats.length - 1], { duration: .01, opacity: 0 });
+
                 // disable all layers and set active to layer 0
+                // TODO: toggle this part off for cool reflection|layer exploit
                 scene.traverse(child => {
                     if (child instanceof THREE.Mesh) {
                         child.layers.disableAll();
                     }
                 });
-                let obj = { 'actors': [water, birdModel, bird2Model] };
+
+                let obj = { 'actors': [water, birdModel, bird2Model, fishModel] };
                 assignLayers(obj, 0);
 
 
@@ -1160,27 +1206,40 @@ function initTimeline() {
 
                 //T1 to animate scale of water
                 let valFrom = 0;
-                let valTo = 1;
+                let valTo = .75;
                 gsapT1.to({}, {
-                    duration: .25, ease: "power2.inOut",
+                    duration: 8, ease: "power2.inOut",
                     onUpdate: function () {
                         water.material.uniforms['config'].value.w = MathUtils.lerp(valFrom, valTo, this.progress());
                         //console.log(`water scale ` + this.progress());
                     }
                 }, '<');
+
+
+                // filler
+                gsapT1.to(sphereMesh.position, { duration: .5, x: sphereMesh.position }); //filler
+
+                // reset and play fish animation once faded in
                 gsapT1.call(function () {
-                    bird2Model.activeClip.paused = true;
-                    bird2Model.activeClip.reset();
-                    bird2Model.activeClip.loop = THREE.LoopOnce;
-                    bird2Model.clampWhenFinished = true;
-                    bird2Model.activeClip.paused = false;
-                    bird2Model.activeClip.play();
+                    fishModel.activeClip.reset();
+                    //fishModel.activeClip.loop = THREE.LoopOnce;
+                    fishModel.clampWhenFinished = true;
+                    fishModel.activeClip.paused = false;
+                    fishModel.activeClip.play();
                 });
+
+                // fade in fish
+                gsapT1.to(mats[mats.length - 1], {
+                    duration: .25, opacity: 1, onComplete: function () {
+                        console.log(`fade ${mats[mats.length - 1].name}`);
+                    }
+                }, '<');
+
+
+                //fade out fish when bird2 position intersects
+
+                gsapT1.to(fishModel.position, { duration: 2, z: 10 }, `>5`);
                 //gsapT1.to(bird2Model.position, { duration: 2, z: 10 }, `>5`);
-
-                // Play animation randomly every 1-10s.
-
-
 
             }
         ),
@@ -1289,10 +1348,13 @@ function assignLayers(sceneObj, layerNum) {
 
 function fadeMats(materials, models, opacity, duration) {
     console.log(`%c fade mats, o: ${opacity}, d: ${duration}`, `color: #B5B5B5`);
-
-    materials.forEach(mat => {
-        gsapT3.to(mat, { duration: duration, opacity: opacity }, '<');
-    });
+    if (Array.isArray(materials)) {
+        materials.forEach(mat => {
+            gsapT3.to(mat, { duration: duration, opacity: opacity }, '<');
+        });
+    } else {
+        gsapT3.to(materials, { duration: duration, opacity: opacity }, '<');
+    }
 
     models.forEach(model => {
         model.traverse(child => {
@@ -1397,10 +1459,10 @@ const tick = () => {
         // Update animation timing
         //console.log(mixers)
         for (let i = 0; i < mixers.length; i++) {
-            //mixers[i].setTime(clock.getElapsedTime());
-            mixers[i].setTime(mixers[i].time + clock.getDelta());
+            mixers[i].setTime(clock.getElapsedTime());
+            //mixers[i].setTime(mixers[i].time + clock.getDelta());
             //mixers[i].update(clock.getDelta());
-            console.log(`${mixers[i].time}  ${clock.getDelta()}`)
+            //console.log(`${mixers[i].time}  ${clock.getDelta()}  ${clock.getElapsedTime()}`);
         }
         sandWispModel.rotation.y = clock.getElapsedTime();
     }
