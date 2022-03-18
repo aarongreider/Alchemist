@@ -417,7 +417,7 @@ function initObjects() {
 
         //set transforms
         bird2Model.scale.set(.0001, .0001, .0001);
-        bird2Model.position.set(1, 3, -2);
+        bird2Model.position.set(1, 3, -10);
 
         // assign material and shadow
         /* bird2Model.traverse(function (child) {
@@ -1170,9 +1170,6 @@ function initTimeline() {
                 gsapT1.clear();
                 gsapT1_2.clear();
 
-                // fade out fish
-                gsapT1.to(mats[mats.length - 1], { duration: .01, opacity: 0 });
-
                 // disable all layers and set active to layer 0
                 // TODO: toggle this part off for cool reflection|layer exploit
                 scene.traverse(child => {
@@ -1181,9 +1178,33 @@ function initTimeline() {
                     }
                 });
 
-                let obj = { 'actors': [water, birdModel, bird2Model, fishModel] };
-                assignLayers(obj, 0);
+                // fade out fish and set position
+                gsapT1.to(mats[mats.length - 1], { duration: .1, opacity: 0, });
+                gsapT1.to(fishModel.position, { duration: .1, x: 0, y: .25, z: -1, }, `<`);
+                // init bird2 position
+                gsapT1.to(bird2Model.position, { duration: .1, x: 1, y: 3, z: -25 }, '<');
 
+                // fade bird1 to .5
+                birdModel.traverse(child => {
+                    if (child.material) {
+                        child.material.transparent = true;
+                        gsapT1.to(child.material, { duration: .1, opacity: .5 }, '<');
+                    };
+                });
+                // rotate bird1 to 180
+                gsapT1.to(birdModel.rotation, { duration: .1, x: degToRad(180), y: degToRad(180) }, '<');
+
+                // enable actors to layer
+                let obj = { 'actors': [water, birdModel, bird2Model, fishModel] };
+                gsapT1.call(assignLayers(obj, 0));
+
+                //init pos
+                gsapT1.to(camera.position, {
+                    duration: 2, ease: "power2.inOut", x: 1, y: 2, z: -1.5,
+                    onUpdate: function () {
+                        camera.lookAt(new THREE.Vector3(0, .25, 0));
+                    }
+                }, `<`);
 
                 //#region bird flap
                 gsapT1_2.call(function () {
@@ -1221,59 +1242,91 @@ function initTimeline() {
                     })
                 });
 
+                //#region start/stop fish anim
+                let fishAnimLength = fishModel.activeClip._clip.duration;
 
-                // filler
-                gsapT1.to(sphereMesh.position, {
-                    duration: .5, x: sphereMesh.position, onComplete: function () {
-                        console.log(`completed filler`)
-                    },
-                }, `<`); //filler
+                // add labels for fishEnter and fishExit
+                gsapT1.addLabel(`fishEnter`, `+=0`)
+                gsapT1.addLabel(`fishExit`, `+=${fishAnimLength}`)
+                console.log(gsapT1.labels.fishEnter);
+                console.log(gsapT1.labels.fishExit);
 
                 // reset and play fish animation once faded in
-                gsapT1.call(function () {
+                gsapT1.to({}, {
+                    duration: 0,
+                    onComplete: function () {
+                        console.log(`unpause fishAnim`)
+                    },
+                }, `fishEnter`).call(function () {
                     fishModel.activeClip.reset();
-                    //fishModel.activeClip.loop = THREE.LoopOnce;
-                    //fishModel.clampWhenFinished = true;
                     fishModel.activeClip.paused = false;
                     fishModel.activeClip.play();
                 });
 
-                // filler
-                gsapT1.to(sphereMesh.position, {
-                    duration: .5, x: sphereMesh.position, onComplete: function () {
-                        console.log(`completed filler 2`)
-                    },
-                }); //filler
-
                 // fade in fish
                 gsapT1.to(mats[mats.length - 1], {
-                    duration: .25, opacity: 1, onComplete: function () {
+                    duration: .5, opacity: 1, onComplete: function () {
                         console.log(`fade ${mats[mats.length - 1].name}`);
                     }
-                }, '<');
+                }, `fishEnter`);
 
-
-                //fade out fish when bird2 position intersects
-
-                // filler
-                gsapT1.to(sphereMesh.position, { duration: 4, x: sphereMesh.position }); // filler
-
-                //pause fish action after duration is over
-                gsapT1.call(function () {
+                // filler with duration, to pause fishAnim
+                gsapT1.to({}, {
+                    duration: .25,
+                    onComplete: function () { console.log(`completed filler 2, pause fish anim`) },
+                }, `fishExit-=.25`).call(function () {
                     fishModel.activeClip.paused = true;
                 });
+                //#endregion
 
-                // filler
-                gsapT1.to(sphereMesh.position, { duration: 4, x: sphereMesh.position }); // filler
+                // move to fish loc
+                gsapT1.to(bird2Model.position, {
+                    duration: fishAnimLength, ease: `linear`,
+                    x: .45, y: 0.85, z: 1,
+                }, `fishEnter`);
 
-                //pause fish action after duration is over
-                gsapT1.call(function () {
-                    fishModel.activeClip.paused = false;
+                gsapT1.call(function () { fadeOverride = true });
+
+                // fly away with fish
+                gsapT1.to(bird2Model.position, {
+                    duration: 2, ease: `power1.out`,
+                    x: 0, y: 2, z: 5,
+                }, `fishExit`);
+                gsapT1.to(fishModel.position, {
+                    duration: 2, ease: `power1.out`,
+                    x: -.44, y: 1.45, z: 2.9,
+                }, `fishExit`);
+            }
+        ),
+        new timelineObj(
+            'pan to watch bird2', -1,
+            [water, birdModel, bird2Model, fishModel],
+            function () {
+                gsapT1.clear();
+                //gsapT1_2.clear();
+
+                // disable all layers and set active to layer 0
+                // TODO: toggle this part off for cool reflection|layer exploit
+                scene.traverse(child => {
+                    if (child instanceof THREE.Mesh) {
+                        child.layers.disableAll();
+                    }
                 });
 
-                /* gsapT1.to(fishModel.position, { duration: 10, z: 5 });
-                gsapT1.to(bird2Model.position, { duration: 5, y: 0.25 }, `<`);
-                gsapT1.to(bird2Model.position, { duration: 10, z: 5 }, `<`); */
+                // enable actors to layer
+                let obj = { 'actors': [water, birdModel, bird2Model, fishModel] };
+                gsapT1.call(assignLayers(obj, 0));
+
+                //init pos
+                let vecFrom = camera.getWorldDirection(new THREE.Vector3());
+                let vecTo = new THREE.Vector3(0, 2, 10);
+                gsapT1.to({}, {
+                    duration: 2, ease: "power2.inOut",
+                    onUpdate: function () {
+                        let state = vecFrom.lerp(vecTo, this.progress());
+                        camera.lookAt(state);
+                    },
+                })
 
             }
         ),
