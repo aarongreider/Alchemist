@@ -18,6 +18,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
  */
 import { gsap } from 'gsap/all';
+import { radToDeg } from 'three/src/math/MathUtils'
 //#endregion
 
 //#region SCENE VARIABLES
@@ -92,7 +93,7 @@ let boxMesh, sphereMesh, pointsMesh, water;
 let boyMixer, girlMixer, heartMixer, birdMixer, bird2Mixer, fishMixer;
 let boyAnimations, girlAnimations, heartAnimations, birdAnimations, bird2Animations, fishAnimations;
 let boySkeleton, birdSkeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel;
-let flowerModel, heartModel, heartPointsModel, birdModel, bird2Model, fishModel;
+let flowerModel, heartModel, heartPointsModel, birdModel, bird2Model, fishModel, treeModel;
 let pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
 let blow_kiss_NLA, spin_NLA;
 
@@ -194,6 +195,24 @@ function initObjects() {
     });
     windMat.name = `wind video mat`
     mats.push(windMat);
+
+    /*     const treeMat = new THREE.MeshBasicMaterial({
+            map: txtLoader.load(`tree/m_tree_baseColor.png`),
+            //color: 0xffffff,
+            side: THREE.DoubleSide,
+            //alphaMap: txtLoader.load(`tree/m_leaves_alpha.png`),
+            transparent: true,
+        })
+        treeMat.name = `tree trunk mat`;
+        mats.push(treeMat); */
+
+    const treeLeavesMat = new THREE.MeshStandardMaterial({
+        color: 0xc09253,
+        alphaMap: txtLoader.load(`tree/m_leaves_alpha.png`),
+        transparent: true,
+    });
+    treeLeavesMat.name = `tree leaves mat`;
+    mats.push(treeLeavesMat);
 
     const flowerMat = new THREE.MeshBasicMaterial({
         map: txtLoader.load("flower_diffuse.png"),
@@ -373,6 +392,32 @@ function initObjects() {
 
         spin_NLA = heartMixer.clipAction(gltf.animations[0]);
         spin_NLA.play();
+    });
+
+    gltfLoader.load(`tree/tree_v3.glb`, (gltf) => {
+        treeModel = gltf.scene;
+        treeModel.name = `tree`;
+
+        //set transforms
+        treeModel.scale.set(.5, .5, .5);
+        treeModel.position.set(0, 0, 0);
+
+        // assign material and shadow
+        treeModel.traverse(function (child) {
+            if (child.isMesh) {
+                if (child.name.includes(`leaf`)) {
+                    child.material = treeLeavesMat;
+                } else {
+                    child.material = glowMat;
+                }
+            }
+        });
+
+        // add model to scene
+        //gltfModels.push(treeModel);
+        gltfModels.push(treeModel);
+        scene.add(treeModel);
+        console.log(treeModel)
     });
 
     /**
@@ -581,7 +626,6 @@ function initObjects() {
     });
     //#endregion
 
-    //#region SPECIAL MESH
     //#region WATER INIT
     const waterGeometry = new THREE.PlaneGeometry(20, 20);
     const flowMap = txtLoader.load('textures/water/Water_1_M_Flow.jpg');
@@ -903,7 +947,7 @@ function initTimeline() {
         ),
         new timelineObj(
             'camera pans around bird', -1,
-            [birdModel, flowerModel, axesHelper,],
+            [birdModel, flowerModel,],
             function () {
                 gsapT1.clear();
                 gsapT1_2.clear();
@@ -1288,13 +1332,15 @@ function initTimeline() {
                 gsapT1.call(function () { fadeOverride = true });
 
                 // fly away with fish
+                let birdFishPos = [0, 2, 5];
+                let birdFishDur = 2;
                 gsapT1.to(bird2Model.position, {
-                    duration: 2, ease: `power1.out`,
-                    x: 0, y: 2, z: 5,
+                    duration: birdFishDur, ease: `power1.out`,
+                    x: birdFishPos[0], y: birdFishPos[1], z: birdFishPos[2],
                 }, `fishExit`);
                 gsapT1.to(fishModel.position, {
-                    duration: 2, ease: `power1.out`,
-                    x: -.44, y: 1.45, z: 2.9,
+                    duration: birdFishDur, ease: `power1.out`,
+                    x: birdFishPos[0] - .44, y: birdFishPos[1] - .535, z: birdFishPos[2] - 2.1,
                 }, `fishExit`);
             }
         ),
@@ -1321,13 +1367,96 @@ function initTimeline() {
                 let vecFrom = camera.getWorldDirection(new THREE.Vector3());
                 let vecTo = new THREE.Vector3(0, 2, 10);
                 gsapT1.to({}, {
-                    duration: 2, ease: "power2.inOut",
+                    duration: 8, ease: "power2.Out",
                     onUpdate: function () {
                         let state = vecFrom.lerp(vecTo, this.progress());
                         camera.lookAt(state);
                     },
+                });
+
+                // init birdPos 2
+                let birdFishPos = [0, 1.75, 2];
+                let birdFishDur = .1;
+                gsapT1.to(bird2Model.position, {
+                    duration: birdFishDur, ease: `power1.out`,
+                    x: birdFishPos[0], y: birdFishPos[1], z: birdFishPos[2],
+                }, `<`);
+                gsapT1.to(fishModel.position, {
+                    duration: birdFishDur, ease: `power1.out`,
+                    x: birdFishPos[0] - .44, y: birdFishPos[1] - .535, z: birdFishPos[2] - 2.1,
+                }, `<`);
+
+                //#region bird2 flap
+                gsapT1_2.call(function () {
+                    switchGLTFAnims(bird2Model, bird2Mixer.clipAction(bird2Animations[2]))
                 })
 
+                // filler
+                gsapT1_2.to({}, {
+                    duration: (Math.random() * 5 + 2),
+                }).call(function () {
+                    switchGLTFAnims(bird2Model, bird2Mixer.clipAction(bird2Animations[3]))
+                })
+
+                // filler
+                gsapT1_2.to({}, {
+                    duration: (Math.random() * 5 + 1),
+                }).call(function () {
+                    switchGLTFAnims(bird2Model, bird2Mixer.clipAction(bird2Animations[3]))
+                })
+                //#endregion
+            }
+        ),
+        new timelineObj(
+            'trees grow in wake of bird', 0,
+            [bird2Model, fishModel, treeModel],
+            function () {
+                gsapT1.clear();
+                gsapT1_2.clear();
+                camera.removeFromParent();
+
+                //init pos
+                gsapT1.to(camera.position, {
+                    duration: 2, ease: "power2.inOut", x: 4, y: 0, z: 0,
+                    onUpdate: function () {
+                        camera.lookAt(new THREE.Vector3(0, 0, 0));
+                    }
+                }, `<`);
+
+                fishMixer.paused = true;
+                fishMixer.setTime(0);
+                //fishModel.rotation.x = radToDeg(90);
+                // init birdPos 2
+                let birdFishPos = [0, 0, 0];
+                let birdFishDur = .1;
+                gsapT1.to(bird2Model.position, {
+                    duration: birdFishDur, ease: `power1.out`,
+                    x: birdFishPos[0], y: birdFishPos[1], z: birdFishPos[2],
+                }, `<`);
+                gsapT1.to(fishModel.position, {
+                    duration: birdFishDur, ease: `power1.out`,
+                    x: birdFishPos[0] + .25, y: birdFishPos[1] - .05, z: birdFishPos[2] - .25,
+                }, `<`);
+
+                //#region bird2 flap
+                gsapT1_2.call(function () {
+                    switchGLTFAnims(bird2Model, bird2Mixer.clipAction(bird2Animations[2]))
+                })
+
+                // filler
+                gsapT1_2.to({}, {
+                    duration: (Math.random() * 5 + 2),
+                }).call(function () {
+                    switchGLTFAnims(bird2Model, bird2Mixer.clipAction(bird2Animations[3]))
+                })
+
+                // filler
+                gsapT1_2.to({}, {
+                    duration: (Math.random() * 5 + 1),
+                }).call(function () {
+                    switchGLTFAnims(bird2Model, bird2Mixer.clipAction(bird2Animations[3]))
+                })
+                //#endregion
             }
         ),
     );
@@ -1422,6 +1551,13 @@ function initLayers() {
 }
 
 function assignLayers(sceneObj, layerNum) {
+    // disable all actors from all layers
+    scene.traverse(child => {
+        if (child instanceof THREE.Mesh) {
+            child.layers.disableAll();
+        }
+    });
+
     // set layer actors
     for (let i = 0; i < sceneObj.actors.length; i++) {
         //console.log(sceneObj.actors[i]);
