@@ -1,0 +1,272 @@
+{
+    "asset" : {
+        "generator" : "Khronos glTF Blender I/O v1.7.33",
+        "version" : "2.0"
+    },
+    "scene" : 0,
+    "scenes" : [
+        {
+            "name" : "Scene",
+            "nodes" : [
+                2
+            ]
+        }
+    ],
+    "nodes" : [
+        {
+            "mesh" : 0,
+            "name" : "leaf_mesh",
+            "translation" : [
+                -1.1333088874816895,
+                582.6612548828125,
+                5.2464799880981445
+            ]
+        },
+        {
+            "mesh" : 1,
+            "name" : "trunk_mesh",
+            "translation" : [
+                -7.058265686035156,
+                483.31549072265625,
+                9.391026496887207
+            ]
+        },
+        {
+            "children" : [
+                0,
+                1
+            ],
+            "name" : "tree_parent",
+            "scale" : [
+                0.010180738754570484,
+                0.010180735029280186,
+                0.010180735029280186
+            ]
+        }
+    ],
+    "materials" : [
+        {
+            "alphaCutoff" : 0.5112159848213196,
+            "alphaMode" : "MASK",
+            "doubleSided" : true,
+            "name" : "m_leaves",
+            "pbrMetallicRoughness" : {
+                "baseColorTexture" : {
+                    "index" : 0
+                },
+                "metallicFactor" : 0
+            }
+        },
+        {
+            "doubleSided" : true,
+            "name" : "m_tree",
+            "pbrMetallicRoughness" : {
+                "baseColorTexture" : {
+                    "index" : 1
+                },
+                "metallicFactor" : 0,
+                "roughnessFactor" : 0.6000000238418579
+            }
+        }
+    ],
+    "meshes" : [
+        {
+            "name" : "MASH3_ReproMesh1_m_leaves_0",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 0,
+                        "NORMAL" : 1,
+                        "TEXCOORD_0" : 2,
+                        "TEXCOORD_1" : 3
+                    },
+                    "indices" : 4,
+                    "material" : 0
+                }
+            ]
+        },
+        {
+            "name" : "MASH3_ReproMesh1_m_tree_0",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 5,
+                        "NORMAL" : 6,
+                        "TEXCOORD_0" : 7,
+                        "TEXCOORD_1" : 8
+                    },
+                    "indices" : 9,
+                    "material" : 1
+                }
+            ]
+        }
+    ],
+    "textures" : [
+        {
+            "sampler" : 0,
+            "source" : 0
+        },
+        {
+            "sampler" : 0,
+            "source" : 1
+        }
+    ],
+    "images" : [
+        {
+            "mimeType" : "image/png",
+            "name" : "m_leaves_baseColor",
+            "uri" : "m_leaves_baseColor.png"
+        },
+        {
+            "mimeType" : "image/png",
+            "name" : "m_tree_baseColor",
+            "uri" : "m_tree_baseColor.png"
+        }
+    ],
+    "accessors" : [
+        {
+            "bufferView" : 0,
+            "componentType" : 5126,
+            "count" : 4484,
+            "max" : [
+                383.57403564453125,
+                358.3336181640625,
+                287.9613037109375
+            ],
+            "min" : [
+                -324.0518798828125,
+                -250.21905517578125,
+                -295.1363830566406
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 1,
+            "componentType" : 5126,
+            "count" : 4484,
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 2,
+            "componentType" : 5126,
+            "count" : 4484,
+            "type" : "VEC2"
+        },
+        {
+            "bufferView" : 3,
+            "componentType" : 5126,
+            "count" : 4484,
+            "type" : "VEC2"
+        },
+        {
+            "bufferView" : 4,
+            "componentType" : 5123,
+            "count" : 4500,
+            "type" : "SCALAR"
+        },
+        {
+            "bufferView" : 5,
+            "componentType" : 5126,
+            "count" : 1173,
+            "max" : [
+                211.2593536376953,
+                178.12646484375,
+                103.76441955566406
+            ],
+            "min" : [
+                -165.41441345214844,
+                -483.31549072265625,
+                -105.25001525878906
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 6,
+            "componentType" : 5126,
+            "count" : 1173,
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 7,
+            "componentType" : 5126,
+            "count" : 1173,
+            "type" : "VEC2"
+        },
+        {
+            "bufferView" : 8,
+            "componentType" : 5126,
+            "count" : 1173,
+            "type" : "VEC2"
+        },
+        {
+            "bufferView" : 9,
+            "componentType" : 5123,
+            "count" : 5670,
+            "type" : "SCALAR"
+        }
+    ],
+    "bufferViews" : [
+        {
+            "buffer" : 0,
+            "byteLength" : 53808,
+            "byteOffset" : 0
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 53808,
+            "byteOffset" : 53808
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 35872,
+            "byteOffset" : 107616
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 35872,
+            "byteOffset" : 143488
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 9000,
+            "byteOffset" : 179360
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 14076,
+            "byteOffset" : 188360
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 14076,
+            "byteOffset" : 202436
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 9384,
+            "byteOffset" : 216512
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 9384,
+            "byteOffset" : 225896
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 11340,
+            "byteOffset" : 235280
+        }
+    ],
+    "samplers" : [
+        {
+            "magFilter" : 9729,
+            "minFilter" : 9987
+        }
+    ],
+    "buffers" : [
+        {
+            "byteLength" : 246620,
+            "uri" : "tree_v2.bin"
+        }
+    ]
+}
