@@ -90,7 +90,7 @@ let mixers = [];
 
 let windVideo;
 let boxMesh, sphereMesh, pointsMesh, water;
-let boyMixer, girlMixer, heartMixer, birdMixer, bird2Mixer, fishMixer;
+let boyMixer, girlMixer, heartMixer, birdMixer, bird2Mixer, fishMixer, treeMixer;
 let boyAnimations, girlAnimations, heartAnimations, birdAnimations, bird2Animations, fishAnimations;
 let boySkeleton, birdSkeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel;
 let flowerModel, heartModel, heartPointsModel, birdModel, bird2Model, fishModel, treeModel;
@@ -319,7 +319,7 @@ function initObjects() {
 
         //set transforms
         windWispModel.scale.set(1, 1, 1);
-        windWispModel.position.set(0, 0, 0);
+        windWispModel.position.set(0, 0, -2);
         console.log(`%c ${windWispModel}`, `color: #e26f03`)
 
         // assign material and shadow
@@ -394,13 +394,14 @@ function initObjects() {
         spin_NLA.play();
     });
 
-    gltfLoader.load(`tree/tree_v3.glb`, (gltf) => {
+    gltfLoader.load(`tree/tree_v5.glb`, (gltf) => {
         treeModel = gltf.scene;
         treeModel.name = `tree`;
 
         //set transforms
-        treeModel.scale.set(.5, .5, .5);
-        treeModel.position.set(0, 0, 0);
+        treeModel.scale.set(.25, .25, .25);
+        treeModel.position.set(0, -.5, .25);
+        treeModel.rotation.set(0, degToRad(91), 0);
 
         // assign material and shadow
         treeModel.traverse(function (child) {
@@ -418,6 +419,13 @@ function initObjects() {
         gltfModels.push(treeModel);
         scene.add(treeModel);
         console.log(treeModel)
+
+        // init animation mixer
+        treeMixer = new THREE.AnimationMixer(treeModel);
+        treeModel.animations = gltf.animations;
+        mixers.push(treeMixer);
+
+        //treeMixer.clipAction(gltf.animations[0]).play();
     });
 
     /**
@@ -878,31 +886,39 @@ function initTimeline() {
             }
         ),
         new timelineObj(
-            'boy turns into wind', -1,
+            'boy turns into wind', 0,
             [windWispModel, boyModel],
             function () {
                 gsapT1.clear();
                 gsapT1.call(function () {
                     switchGLTFAnims(boyModel, sitting_NLA);
                 })
+
+                gsapT1.to(camera.position, {
+                    duration: .1, x: -2.25, y: 0, z: .5, onUpdate: function () {
+                        camera.lookAt(new THREE.Vector3(0, .5, .5));
+                    }
+                }, `<`);
+
+
                 gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z + 6 });
                 gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z });
             }
         ),
         new timelineObj(
-            'heart fades in and rotates', -1,
+            'heart fades in and rotates', 0,
             [heartModel],
             function () {
                 gsapT1.clear();
                 gsapT1.call(function () {
 
                 })
-                gsapT1.to(camera.position, { duration: 0, x: 0 }, `<`);
-                gsapT1.to(camera.position, { duration: 0, y: .55 }, `<`);
-                gsapT1.to(camera.position, { duration: 0, z: -2 }, `<`);
-                gsapT1.call(function () {
-                    camera.lookAt(new THREE.Vector3(0, .5, 0));
-                })
+                gsapT1.to(camera.position, {
+                    duration: .1, x: 0, y: .55, z: -2, onUpdate: function () {
+                        camera.lookAt(new THREE.Vector3(0, .5, 0));
+                    }
+                });
+
                 //heart fade in and rotate
 
             }
@@ -1345,7 +1361,7 @@ function initTimeline() {
             }
         ),
         new timelineObj(
-            'pan to watch bird2', -1,
+            'pan to watch bird2', 0,
             [water, birdModel, bird2Model, fishModel],
             function () {
                 gsapT1.clear();
@@ -1417,7 +1433,7 @@ function initTimeline() {
 
                 //init pos
                 gsapT1.to(camera.position, {
-                    duration: 2, ease: "power2.inOut", x: 4, y: 0, z: 0,
+                    duration: 2, ease: "power2.inOut", x: 8, y: 0, z: 0,
                     onUpdate: function () {
                         camera.lookAt(new THREE.Vector3(0, 0, 0));
                     }
@@ -1425,9 +1441,10 @@ function initTimeline() {
 
                 fishMixer.paused = true;
                 fishMixer.setTime(0);
+
                 //fishModel.rotation.x = radToDeg(90);
                 // init birdPos 2
-                let birdFishPos = [0, 0, 0];
+                let birdFishPos = [0, .5, -8];
                 let birdFishDur = .1;
                 gsapT1.to(bird2Model.position, {
                     duration: birdFishDur, ease: `power1.out`,
@@ -1457,6 +1474,50 @@ function initTimeline() {
                     switchGLTFAnims(bird2Model, bird2Mixer.clipAction(bird2Animations[3]))
                 })
                 //#endregion
+
+                gsapT1.call(function () {
+                    treeMixer.setTime(0);
+                    treeModel.animations.forEach(animation => {
+                        var action = treeMixer.clipAction(animation);
+                        action.loop = THREE.LoopOnce;
+                        action.clampWhenFinished = true;
+                        action.clamp
+                        action.play();
+                    });
+                });
+
+                birdFishPos = [0, .5, 11];
+                birdFishDur = 10;
+                gsapT1.to(bird2Model.position, {
+                    duration: birdFishDur, ease: `none`,
+                    x: birdFishPos[0], y: birdFishPos[1], z: birdFishPos[2],
+                }, `<`);
+                gsapT1.to(fishModel.position, {
+                    duration: birdFishDur, ease: `none`,
+                    x: birdFishPos[0] + .25, y: birdFishPos[1] - .05, z: birdFishPos[2] - .25,
+                }, `<`);
+            }
+        ),
+        new timelineObj(
+            'boy fades back in', 0,
+            [boyModel],
+            function () {
+                gsapT1.clear();
+                gsapT1_2.clear();
+
+                //init pos
+                gsapT1.to(camera.position, {
+                    duration: 2, ease: "power2.inOut", x: 8, y: 0, z: 0,
+                    onUpdate: function () {
+                        camera.lookAt(new THREE.Vector3(0, 0, 0));
+                    }
+                }, `<`);
+
+
+                // set position of boy
+                // play hair animation
+                gsapT1.to(boyModel.position, { duration: .1, x: 0, y: 0, z: 0 }, `<`);
+
             }
         ),
     );
