@@ -227,6 +227,15 @@ function initObjects() {
         size: .0005,
     })
 
+    const pointsWindMat = new THREE.PointsMaterial({
+        transparent: true,
+        //map: windTxt,
+        //color: 0xc09253,
+        side: THREE.DoubleSide,
+        //alphaMap: windTxt,
+        size: .05,
+    });
+
     const glowMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         //emissive: 0xffffff,
@@ -322,17 +331,25 @@ function initObjects() {
         windWispModel.position.set(0, 0, -2);
         console.log(`%c ${windWispModel}`, `color: #e26f03`)
 
+        //let geometries = [];
+
         // assign material and shadow
         windWispModel.traverse(function (child) {
             if (child.isMesh) {
                 //object.receiveShadow = true;
                 child.material = windMat;
+                //geometries.push(child.geometry);
             }
         });
+        //console.log(geometries);
+
 
         // add model to scene
         gltfModels.push(windWispModel);
         scene.add(windWispModel);
+
+        // add points model to scene
+        //scene.add(new THREE.Points(geometries[0], pointsWindMat));
     });
 
     /**
@@ -535,7 +552,7 @@ function initObjects() {
     * LOAD BOY GLTF
     */
 
-    gltfLoader.load(`boy_v15.gltf`, (gltf) => {
+    gltfLoader.load(`boy_v16.glb`, (gltf) => {
         boyModel = gltf.scene;
         boyModel.name = `boy`;
 
@@ -1500,14 +1517,14 @@ function initTimeline() {
         ),
         new timelineObj(
             'boy fades back in', 0,
-            [boyModel],
+            [boyModel, windWispModel],
             function () {
                 gsapT1.clear();
                 gsapT1_2.clear();
 
                 //init pos
                 gsapT1.to(camera.position, {
-                    duration: 2, ease: "power2.inOut", x: 8, y: 0, z: 0,
+                    duration: 2, ease: "power2.inOut", x: 0, y: 0, z: 2,
                     onUpdate: function () {
                         camera.lookAt(new THREE.Vector3(0, 0, 0));
                     }
@@ -1516,8 +1533,193 @@ function initTimeline() {
 
                 // set position of boy
                 // play hair animation
-                gsapT1.to(boyModel.position, { duration: .1, x: 0, y: 0, z: 0 }, `<`);
+                gsapT1.to(boyModel.position, {
+                    duration: .1, x: 0, y: 0, z: 0,
+                }, `<`).call(function () {
+                    switchGLTFAnims(boyModel, sitting_NLA);
+                    boyMixer.clipAction(boyAnimations[5]).play();
+                })
 
+                gsapT1.call(function () { fadeOverride = true; });
+            }
+        ),
+        new timelineObj(
+            'camera stays on boy', 0,
+            [boyModel, windWispModel],
+            function () {
+                gsapT1.clear();
+
+                //init pos
+                gsapT1.to(camera.position, {
+                    duration: 2, ease: "power2.inOut", x: 0, y: 0, z: 2,
+                    onUpdate: function () {
+                        camera.lookAt(new THREE.Vector3(0, 0, 0));
+                    }
+                }, `<`);
+
+
+                // set position of boy
+                // play hair animation
+                gsapT1.to(boyModel.position, {
+                    duration: .1, x: 0, y: 0, z: 0,
+                }, `<`).call(function () {
+                    switchGLTFAnims(boyModel, sitting_NLA);
+                    boyMixer.clipAction(boyAnimations[5]).play();
+                });
+                gsapT1.call(function () { fadeOverride = true; });
+            }
+        ),
+        new timelineObj(
+            'a sandstorm kicks up', 0,
+            [boyModel, windWispModel],
+            function () {
+                gsapT1.clear();
+                gsapT1_2.clear();
+
+                //init pos
+                gsapT1.to(camera.position, {
+                    duration: 2, ease: "power2.inOut", x: 0, y: 0, z: 2,
+                    onUpdate: function () {
+                        camera.lookAt(new THREE.Vector3(0, 0, 0));
+                    }
+                }, `<`);
+
+                //#region POINTS
+                let vertices = [];
+
+                for (let i = 0; i < 5000; i++) {
+                    const x = THREE.MathUtils.randFloatSpread(2);
+                    const y = THREE.MathUtils.randFloatSpread(2);
+                    const z = THREE.MathUtils.randFloatSpread(2);
+
+                    vertices.push(x, y, z);
+                }
+
+                /* const buffGeometry = new THREE.BufferGeometry();
+                buffGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                buffGeometry.attributes.position.needsUpdate = true; */
+
+                const material = new THREE.PointsMaterial({
+                    color: 0x888888,
+                    size: .0025,
+                    transparent: true,
+                    opacity: 0,
+                });
+                /* const points = new THREE.Points(buffGeometry, material); */
+
+
+                let points = new THREE.Points(
+                    new THREE.BufferGeometry().setAttribute('position',
+                        new THREE.Float32BufferAttribute(vertices, 3)), material);
+
+                scene.add(points);
+                points.layers.set(activeSceneNum);
+
+
+                class particleSystem {
+                    constructor(_geometry, _uniforms, _vertices) {
+                        this._geometry = geometry;
+                        this._vertices = vertices;
+
+                        this._material = new THREE.ShaderMaterial({
+                            uniforms: _uniforms,
+                            vertexShader: document.getElementById(`vertexParticleShader`),
+                            fragmentShader: document.getElementById(`fragmentSimulation`),
+                        });
+
+                        this._points = new THREE.Points(_geometry, _material);
+                        this.updateGeometry()
+                    }
+
+                    updateGeometry() {
+
+                        this._geometry.setAttribute('position', new THREE.Float32BufferAttribute(this._vertices, 3));
+                        this._geometry.attributes.position.needsUpdate = true;
+                    }
+
+                    updateParticles() {
+
+                    }
+                }
+                //#endregion
+
+                //camera pan
+                /* let rotObj = new Object3D();
+                scene.add(rotObj);
+                rotObj.add(camera); */
+
+                /* gsapT1.to(rotObj.rotation, { 
+                    duration: 12, ease: "linear", y: degToRad(360), 
+                    onUpdate: function () {
+                        camera.lookAt(new THREE.Vector3(0, 0, 0));
+                    }
+                }, `<`); */
+                //gsapT1.to(rotObj.rotation, { duration: 18, ease: "linear", x: degToRad(45) }, `<`);
+                gsapT1.to(material, { duration: 1, opacity: 1 }, '<');
+
+                // move particles in random direction and update buffer??? see pevious versions
+
+                // generate 5000 particles every frame
+                gsapT1_2.to({}, {
+                    duration: 2, ease: "power2.inOut",
+                    onUpdate: function () {
+                        scene.remove(points);
+                        //fromVal.lerp(toVal, this.progress());
+                        vertices = [];
+
+                        for (let i = 0; i < 5000; i++) {
+                            const x = THREE.MathUtils.randFloatSpread(2);
+                            const y = THREE.MathUtils.randFloatSpread(2);
+                            const z = THREE.MathUtils.randFloatSpread(2);
+
+                            vertices.push(x, y, z);
+                        }
+
+                        points = new THREE.Points(
+                            new THREE.BufferGeometry().setAttribute('position',
+                                new THREE.Float32BufferAttribute(vertices, 3)), material);
+
+                        scene.add(points);
+                        points.layers.set(activeSceneNum);
+                        //console.log(this.progress());
+                    }
+                }, `<`);
+
+                //sceneCompleted = true;
+                gsapT1.call(function () { fadeOverride = true });
+            }
+        ),
+        new timelineObj(
+            'zoom out, bloom intensifies', 0,
+            [boyModel, windWispModel],
+            function () {
+                gsapT1.clear();
+
+                //init pos
+                gsapT1.to(camera.position, {
+                    duration: .1, ease: "power2.inOut", x: 0, y: 0, z: 1.25,
+                    onUpdate: function () {
+                        camera.lookAt(new THREE.Vector3(0, 0, 0));
+                    }
+                }, `<`);
+
+                gsapT1.to(camera.position, {
+                    duration: 15, ease: "power2.inOut", x: 0, y: 0, z: 12,
+                    onUpdate: function () {
+                        camera.lookAt(new THREE.Vector3(0, 0, 0));
+                    }
+                }, `<`);
+                { bloomPass.intensity = 4; }
+
+                // set position of boy
+                // play hair animation
+                gsapT1.to(boyModel.position, {
+                    duration: .1, x: 0, y: 0, z: 0,
+                }, `<`).call(function () {
+                    switchGLTFAnims(boyModel, sitting_NLA);
+                    boyMixer.clipAction(boyAnimations[5]).play();
+                });
+                gsapT1.call(function () { fadeOverride = true; });
             }
         ),
     );
@@ -1551,6 +1753,8 @@ function initTimeline() {
     gsapT2.timeScale(2);
     gsapT3.timeScale(2); */
 }
+
+//#region SCENE_NAVIGATION
 
 function advanceScene() {
     cursor.style.display = 'none';
@@ -1649,6 +1853,9 @@ function fadeMats(materials, models, opacity, duration) {
         });
     });
 }
+
+//#endregion
+
 
 function degToRad(deg) {
     return (deg * (Math.PI / 180))
