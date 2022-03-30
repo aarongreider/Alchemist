@@ -33,144 +33,48 @@
         <h1>The Alchemist</h1>
 
         <p>This web-storybook is based on the classic inspirational novel by Paulo Coelho.
-
+            <br><br>
             This webpage will step you through a fresh reimagining of the story, a visual transition of the old world
-            with the new.</p>
+            with the new.
+        </p>
 
         <button>BEGIN</button>
     </div>
-
-    <script id="vertexShader" type="x-shader/x-vertex">
-        varying vec2 vUv;
-    
-    	void main()	{
-    		vUv = uv;
-    		//gl_Position = vec4(position, 1.0 );
-            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-    	}
-    </script>
-
-    <script id="fragmentShader" type="x-shader/x-fragment">
-                varying vec2 vUv;
-    			uniform float time;
-                uniform vec2 resolution;
-                uniform sampler2D sampleTxt;
-    
-                void main() {
-                    	vec3 c;
-                        //z -> distance between colors
-                        //l -> length of uv and p OR time
-                        float l;
-                        float z = time;
-                        //each frame run 3 iterations for rgb
-                        for(int i=0;i<3;i++) {
-                            float a = 0.5;
-                            //vec2 uv,p = ( gl_FragCoord.xy / resolution.xy ) - a;
-                            //uv = p;
-                            vec2 uv = vUv;
-                            vec2 p = ( gl_FragCoord.xy / resolution.xy ) - abs(sin(vUv));
-                            //uv-=0.25;
-                            p -= .5;
-                            p.x *= resolution.x/resolution.y;
-                            z += .07;
-                            l = length(p);
-                            uv += p/l*(sin(z)+.25)*sin(l*9.-z-z);
-                            c[i] = .01/length(mod(uv,1.)-.5);
-                        } 
-                        //gl_FragColor=vec4(c/l + 0.1, c/l);
-                        gl_FragColor=vec4(c/l, (c.x+c.y+c.z));
-                }
-    </script>
-
-    <script id="fragmentShader2" type="x-shader/x-fragment">
-                varying vec2 vUv;
-                uniform sampler2D sampleTxt;
-    
-                void main() { 
-                    gl_FragColor = texture2D(sampleTxt,vUv);
-                }
-    </script>
-
-    <script id="fragmentShader3" type="x-shader/x-fragment">
-                uniform float time;
-                varying vec2 vUv;
-
-                void main( void ) {
-                    vec2 position = - 1.0 + 2.0 * vUv;
-
-                    float red = abs( sin( position.x * position.y + time / 5.0 ) );
-                    float green = abs( sin( position.x * position.y + time / 4.0 ) );
-                    float blue = abs( sin( position.x * position.y + time / 3.0 ) );
-                    gl_FragColor = vec4( red, green, blue, 1.0 );
-                }
-
-    </script>
-
-    <script id="fragmentShader4" type="x-shader/x-fragment">
-        //uniform float thickness;
-			varying vec3 vCenter;
-			void main() {
-                float thickness = 1;
-				vec3 afwidth = fwidth( vCenter.xyz );
-				vec3 edge3 = smoothstep( ( thickness - 1.0 ) * afwidth, thickness * afwidth, vCenter.xyz );
-				float edge = 1.0 - min( min( edge3.x, edge3.y ), edge3.z );
-
-				gl_FragColor.rgb = gl_FrontFacing ? vec3( 0.9, 0.9, 1.0 ) : vec3( 0.4, 0.4, 0.5 );
-				//gl_FragColor.a = edge;
-
-			}
-    </script>
-
-    <!-- particles -->
-    <script id="vertexParticleShader" type="x-shader/x-vertex">
-        uniform float pointMultiplier;
-    
-    	void main()	{
-    		vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-            gl_Position = projectionMatrix * mvPosition;
-            gl_PointSize = pointMultiplier / gl_Position.w;
-    	}
-    </script>
-
-    <script id="fragmentSimulation" type="x-shader/x-fragment">
-                    uniform sampler2D sampleTxt;
-        
-                    void main() { 
-                        gl_FragColor = texture2D(sampleTxt, gl_PointCoord);
-                    }
-        </script>
-
-
 
 
     <div id="cursor">
 
     </div>
 
-    <!-- navigation UI 
+    <!-- navigation UI -->
     <div id="UI">
         <div id="chapterNav">
-            <img src="/Users/aarongreider/Desktop/CODE/Alchemist/static/html/ham.png">
+            <img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/ham.png">
+            <!-- <img src="/Users/aarongreider/Desktop/CODE/Alchemist/static/html/ham.png"> -->
             <p>
-                <span id="active">PART I, <i>The Desert</i></span> —————
-                <span>PART II, <i>The Falcon</i></span> —————
-                <span>PART III, <i>The Wind</i></span>
+                <span id="active">part i, <i>The Desert</i></span>
+                <span class="line">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                <span>part ii, <i>The Falcon</i></span>
+                <span class="line">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                <span>part iii, <i>The Wind</i></span>
             </p>
         </div>
+
         <div>
-            <img src="/Users/aarongreider/Desktop/CODE/Alchemist/static/html/previous.png">
+            <img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/previous.png">
             <p>previous</p>
         </div>
         <div>
-            <img src="/Users/aarongreider/Desktop/CODE/Alchemist/static/html/skip.png">
+            <img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/skip.png">
             <p>skip</p>
         </div>
         <div>
-            <img src="/Users/aarongreider/Desktop/CODE/Alchemist/static/html/restart.png">
+            <img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/restart.png">
             <p>restart</p>
         </div>
+
     </div>
--->
+
     <!-- narrated text -->
     <div class="narrator">
         <p>
@@ -253,6 +157,110 @@
     <video id="windVideo" loop crossOrigin="anonymous" playsinline style="height: 1px; width: 1px; display:none">
         <source src="/Users/aarongreider/Desktop/CODE/Alchemist/static/wind_wisp2.mp4" type='video/mp4;'>
     </video>
+
+
+
+    <!-- SHADERS -->
+
+    <script id="vertexShader" type="x-shader/x-vertex">
+            varying vec2 vUv;
+        
+        	void main()	{
+        		vUv = uv;
+        		//gl_Position = vec4(position, 1.0 );
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+        	}
+        </script>
+
+    <script id="fragmentShader" type="x-shader/x-fragment">
+                    varying vec2 vUv;
+        			uniform float time;
+                    uniform vec2 resolution;
+                    uniform sampler2D sampleTxt;
+        
+                    void main() {
+                        	vec3 c;
+                            //z -> distance between colors
+                            //l -> length of uv and p OR time
+                            float l;
+                            float z = time;
+                            //each frame run 3 iterations for rgb
+                            for(int i=0;i<3;i++) {
+                                float a = 0.5;
+                                //vec2 uv,p = ( gl_FragCoord.xy / resolution.xy ) - a;
+                                //uv = p;
+                                vec2 uv = vUv;
+                                vec2 p = ( gl_FragCoord.xy / resolution.xy ) - abs(sin(vUv));
+                                //uv-=0.25;
+                                p -= .5;
+                                p.x *= resolution.x/resolution.y;
+                                z += .07;
+                                l = length(p);
+                                uv += p/l*(sin(z)+.25)*sin(l*9.-z-z);
+                                c[i] = .01/length(mod(uv,1.)-.5);
+                            } 
+                            //gl_FragColor=vec4(c/l + 0.1, c/l);
+                            gl_FragColor=vec4(c/l, (c.x+c.y+c.z));
+                    }
+        </script>
+
+    <script id="fragmentShader2" type="x-shader/x-fragment">
+                    varying vec2 vUv;
+                    uniform sampler2D sampleTxt;
+        
+                    void main() { 
+                        gl_FragColor = texture2D(sampleTxt,vUv);
+                    }
+        </script>
+
+    <script id="fragmentShader3" type="x-shader/x-fragment">
+                    uniform float time;
+                    varying vec2 vUv;
+    
+                    void main( void ) {
+                        vec2 position = - 1.0 + 2.0 * vUv;
+    
+                        float red = abs( sin( position.x * position.y + time / 5.0 ) );
+                        float green = abs( sin( position.x * position.y + time / 4.0 ) );
+                        float blue = abs( sin( position.x * position.y + time / 3.0 ) );
+                        gl_FragColor = vec4( red, green, blue, 1.0 );
+                    }
+    
+        </script>
+
+    <script id="fragmentShader4" type="x-shader/x-fragment">
+            //uniform float thickness;
+    			varying vec3 vCenter;
+    			void main() {
+                    float thickness = 1;
+    				vec3 afwidth = fwidth( vCenter.xyz );
+    				vec3 edge3 = smoothstep( ( thickness - 1.0 ) * afwidth, thickness * afwidth, vCenter.xyz );
+    				float edge = 1.0 - min( min( edge3.x, edge3.y ), edge3.z );
+    
+    				gl_FragColor.rgb = gl_FrontFacing ? vec3( 0.9, 0.9, 1.0 ) : vec3( 0.4, 0.4, 0.5 );
+    				//gl_FragColor.a = edge;
+    
+    			}
+        </script>
+
+    <!-- particles -->
+    <script id="vertexParticleShader" type="x-shader/x-vertex">
+            uniform float pointMultiplier;
+        
+        	void main()	{
+        		vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+                gl_Position = projectionMatrix * mvPosition;
+                gl_PointSize = pointMultiplier / gl_Position.w;
+        	}
+        </script>
+
+    <script id="fragmentSimulation" type="x-shader/x-fragment">
+                        uniform sampler2D sampleTxt;
+            
+                        void main() { 
+                            gl_FragColor = texture2D(sampleTxt, gl_PointCoord);
+                        }
+            </script>
 
 </body>
 
