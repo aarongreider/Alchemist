@@ -732,8 +732,12 @@ function initScene() {
     camera.position.y = 0
     camera.position.z = 2
     scene.add(camera)
-    gui.add(camera.position, "y").min(-10).max(10);
-    gui.add(camera.position, "x").min(-10).max(10);
+
+    const folder2 = gui.addFolder('camera controls');
+
+    folder2.add(camera.position, "x").min(-10).max(10);
+    folder2.add(camera.position, "y").min(-10).max(10);
+    folder2.add(camera.position, "z").min(-10).max(10);
 
     // Controls
     controls = new OrbitControls(camera, canvas)
@@ -1524,7 +1528,7 @@ function initTimeline() {
 
                 //init pos
                 gsapT1.to(camera.position, {
-                    duration: 2, ease: "power2.inOut", x: 0, y: 0, z: 2,
+                    duration: 2, ease: "power2.inOut", x: 0, y: 0, z: 1,
                     onUpdate: function () {
                         camera.lookAt(new THREE.Vector3(0, 0, 0));
                     }
@@ -1551,7 +1555,7 @@ function initTimeline() {
 
                 //init pos
                 gsapT1.to(camera.position, {
-                    duration: 2, ease: "power2.inOut", x: 0, y: 0, z: 2,
+                    duration: 2, ease: "power2.inOut", x: 0, y: 0, z: 1,
                     onUpdate: function () {
                         camera.lookAt(new THREE.Vector3(0, 0, 0));
                     }
@@ -1578,11 +1582,11 @@ function initTimeline() {
 
                 //init pos
                 gsapT1.to(camera.position, {
-                    duration: 2, ease: "power2.inOut", x: 0, y: 0, z: 2,
+                    duration: 2, ease: "power2.inOut", x: 0, y: 0, z: 1,
                     onUpdate: function () {
                         camera.lookAt(new THREE.Vector3(0, 0, 0));
                     }
-                }, `<`);
+                }, `<`).call(function () { fadeOverride = true });
 
                 //#region POINTS
                 let vertices = [];
@@ -1643,18 +1647,6 @@ function initTimeline() {
                 }
                 //#endregion
 
-                //camera pan
-                /* let rotObj = new Object3D();
-                scene.add(rotObj);
-                rotObj.add(camera); */
-
-                /* gsapT1.to(rotObj.rotation, { 
-                    duration: 12, ease: "linear", y: degToRad(360), 
-                    onUpdate: function () {
-                        camera.lookAt(new THREE.Vector3(0, 0, 0));
-                    }
-                }, `<`); */
-                //gsapT1.to(rotObj.rotation, { duration: 18, ease: "linear", x: degToRad(45) }, `<`);
                 gsapT1.to(material, { duration: 1, opacity: 1 }, '<');
 
                 // move particles in random direction and update buffer??? see pevious versions
@@ -1684,9 +1676,6 @@ function initTimeline() {
                         //console.log(this.progress());
                     }
                 }, `<`);
-
-                //sceneCompleted = true;
-                gsapT1.call(function () { fadeOverride = true });
             }
         ),
         new timelineObj(
@@ -1695,21 +1684,21 @@ function initTimeline() {
             function () {
                 gsapT1.clear();
 
-                //init pos
+                // init pos
                 gsapT1.to(camera.position, {
-                    duration: .1, ease: "power2.inOut", x: 0, y: 0, z: 1.25,
+                    duration: .1, ease: "power2.inOut", x: 0, y: 0, z: 1,
                     onUpdate: function () {
                         camera.lookAt(new THREE.Vector3(0, 0, 0));
                     }
                 }, `<`);
 
-                gsapT1.to(camera.position, {
-                    duration: 15, ease: "power2.inOut", x: 0, y: 0, z: 12,
-                    onUpdate: function () {
-                        camera.lookAt(new THREE.Vector3(0, 0, 0));
-                    }
+                // init default blom settings
+                gsapT1.to(bloomPass, {
+                    duration: .1, ease: "power2.inOut", intensity: .5,
                 }, `<`);
-                { bloomPass.intensity = 4; }
+                gsapT1.to(bloomPass.blurPass, {
+                    duration: .1, ease: "power2.inOut", scale: 1, width: 1080, height: 1080,
+                }, `<`);
 
                 // set position of boy
                 // play hair animation
@@ -1719,7 +1708,51 @@ function initTimeline() {
                     switchGLTFAnims(boyModel, sitting_NLA);
                     boyMixer.clipAction(boyAnimations[5]).play();
                 });
-                gsapT1.call(function () { fadeOverride = true; });
+
+                let fadeDur = 15
+                gsapT1.to(camera.position, {
+                    duration: fadeDur, ease: "power2.inOut", x: 0, y: 0, z: 1.5,
+                    onUpdate: function () {
+                        camera.lookAt(new THREE.Vector3(0, 0, 0));
+                    }
+                }, `<`)
+
+                //bloom to fill screen
+                gsapT1.to(bloomPass, {
+                    duration: fadeDur, ease: "power2.inOut", intensity: 50,
+                }, `<`);
+                gsapT1.to(bloomPass.blurPass, {
+                    duration: fadeDur, ease: "power2.inOut", scale: 15, width: 50, height: 1080,
+                }, `<`);
+
+                /* console.log(bloomPass);
+                console.log(bloomPass.blurPass); */
+
+
+                // default bloom settings
+                let implodeDur = .1;
+                gsapT1.to(bloomPass, {
+                    duration: implodeDur, ease: "power2.in", intensity: 50, luminanceThreshold: 0,
+                });
+                gsapT1.to(bloomPass.blurPass, {
+                    duration: implodeDur, ease: "power2.in", scale: 12, width: 1080, height: 1080,
+                }, `<`);
+
+                gsapT1.to({}, { duration: fadeDur }).call(
+                    scene.traverse(child => {
+                        if (child.material) {
+                            child.material.transparent = true;
+                            //child.material.opacity = 0
+                            gsapT1.to(child.material, { duration: implodeDur, opacity: 0 }, '<');
+                        };
+                    })
+                )
+
+                const folder3 = gui.addFolder('bloom controls');
+                folder3.add(bloomPass.blurPass, "scale").min(0).max(50);
+                folder3.add(bloomPass.blurPass, "width").min(0).max(1080);
+                folder3.add(bloomPass.blurPass, "height").min(-25).max(1080);
+                folder3.add(bloomPass, 'intensity').min(-25).max(100);
             }
         ),
     );

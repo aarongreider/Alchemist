@@ -118,7 +118,7 @@ body
     justify-content: flex-end;
     align-items: center;
 }
-
+ 
 .narrator p {
     font-family: 'neacademia_display_trialRg';
     font-size: 1.5rem;
@@ -141,4 +141,45 @@ p i {
 
 .allNarration {
     display: none;
+}
+
+#UI {
+    height: 10vh;
+    width: 10vw;
+    margin: 2rem;
+    
+    position: absolute;
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: flex-end;
+    align-items: center;
+
+    z-index: 5;
+}
+
+#UI p {
+    font-family: 'neacademia_display_trialRg';
+    font-variant: small-caps;
+    font-size: 1rem;
+    text-align: center;
+    color: whitesmoke;
+        
+    position: absolute;
+    z-index: 5;
+
+    min-width: 30rem;
+    max-width: 40rem;
+    width: 60vw;
+    
+    text-shadow: 1px 1px 4px rgb(0 0 0 / 56%);
+}
+
+#UI div {
+    height: 2rem;
+    width: auto;
+
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: flex-end;
+    align-items: center;
 }
