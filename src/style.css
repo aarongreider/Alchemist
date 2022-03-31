@@ -1,37 +1,35 @@
 @font-face {
     font-family: 'neacademia_display_trialIt';
     src: url('neacademiadisplaytrial-it-webfont.woff2') format('woff2'),
-         url('neacademiadisplaytrial-it-webfont.woff') format('woff');
-    font-weight: normal;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'neacademia_display_trialRg';
-    src: url('neacademiadisplaytrial-rg-webfont.woff2') format('woff2'),
-         url('neacademiadisplaytrial-rg-webfont.woff') format('woff');
+        url('neacademiadisplaytrial-it-webfont.woff') format('woff');
     font-weight: normal;
     font-style: normal;
 }
 
-*
-{
+@font-face {
+    font-family: 'neacademia_display_trialRg';
+    src: url('neacademiadisplaytrial-rg-webfont.woff2') format('woff2'),
+        url('neacademiadisplaytrial-rg-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+* {
     margin: 0;
     padding: 0;
     /* overflow: hidden;
     overflow-x: hidden;
     overflow-y: scroll; */
 }
- 
+
 html,
-body
-{
+body {
     height: 100vh;
     font-family: 'Roboto', sans-serif;
     font-weight: 100;
 }
 
-.webgl
-{
+.webgl {
     position: fixed;
     top: 0;
     left: 0;
@@ -43,13 +41,14 @@ body
 }
 
 @keyframes blink {
-	from { 
+    from {
         opacity: 0;
-         transform: scale(0.95);
+        transform: scale(0.95);
     }
-    to { 
+
+    to {
         opacity: .6;
-         transform: scale(1);
+        transform: scale(1);
     }
 }
 
@@ -58,7 +57,7 @@ body
     width: 3rem;
     background-color: aliceblue;
     border-radius: 100%;
-    
+
     position: absolute;
     z-index: 5;
     top: 82vh;
@@ -71,7 +70,7 @@ body
     transform-origin: center;
     animation: blink .85s infinite;
     animation-direction: alternate;
-    
+
     display: none;
 }
 
@@ -80,7 +79,7 @@ body
     width: 50%;
     outline: 2px whitesmoke;
     background-color: none;
-    
+
     display: flex;
     justify-content: center;
     align-content: center;
@@ -90,18 +89,31 @@ body
     animation-direction: alternate;
 }
 
+video {
+    position: absolute;
+    width: auto;
+    height: 135vh;
+    z-index: 0;
+
+    object-fit: cover;
+}
 
 #splash {
     width: 100vw;
     height: 100vh;
     position: absolute;
-    
-    background-color: black;
-
     z-index: 10;
 
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    align-items: center;
+
+    background-color: black;
     background-image: url("https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/splash_bg.jpg");
     background-size: cover;
+
+    overflow: hidden;
 }
 
 #splash div {
@@ -111,6 +123,9 @@ body
     flex-flow: column nowrap;
     justify-content: flex-start;
     align-items: flex-start;
+
+    align-self: flex-start;
+    z-index: 11;
 }
 
 #splash h1 {
@@ -149,27 +164,27 @@ body
 .narrator {
     height: 90vh;
     width: 100vw;
-    
+
     position: absolute;
     display: flex;
     flex-flow: column nowrap;
     justify-content: flex-end;
     align-items: center;
 }
- 
+
 .narrator p {
     font-family: 'neacademia_display_trialRg';
     font-size: 1.5rem;
     text-align: center;
     color: whitesmoke;
-        
+
     position: absolute;
     z-index: 5;
 
     min-width: 30rem;
     max-width: 40rem;
     width: 60vw;
-    
+
     text-shadow: 1px 1px 4px rgb(0 0 0 / 56%);
 }
 
@@ -185,7 +200,7 @@ p i {
     height: auto;
     width: auto;
     margin: 0rem 0rem;
-    
+
     position: absolute;
 
     display: flex;
@@ -195,13 +210,18 @@ p i {
 
     z-index: 5;
 }
-#UI *, button {
+
+#UI *,
+button {
     cursor: pointer;
     transition: transform .25s, opacity .25s;
     transition-timing-function: ease-out;
 }
-#UI p:hover:not(.noHover),#UI img:hover, button:hover {
-    transform: scale(1.05); 
+
+#UI p:hover:not(.noHover),
+#UI img:hover,
+button:hover {
+    transform: scale(1.05);
 }
 
 #UI span:hover:not(.line) {
@@ -215,14 +235,14 @@ p i {
     font-size: .85rem;
     text-align: left;
     color: whitesmoke;
-        
+
     position: relative;
     z-index: inherit;
 
     /* min-width: 30rem;
     max-width: 40rem; */
     width: auto;
-    
+
     text-shadow: 1px 1px 4px rgb(0 0 0 / 56%);
 }
 
@@ -231,7 +251,7 @@ p i {
     font-variant: normal !important;
     letter-spacing: 0;
     font-size: 1.1em;
-   
+
 }
 
 #UI div {
@@ -253,7 +273,7 @@ p i {
     opacity: .5;
 }
 
-#UI div #active {
+#UI div .active {
     opacity: 1;
 }
 

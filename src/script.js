@@ -25,6 +25,7 @@ import { radToDeg } from 'three/src/math/MathUtils'
 
 // Debug
 const gui = new dat.GUI();
+gui.close()
 const stats = Stats();
 stats.showPanel(0) // 0: fps, 1: ms, 2: mb, 3+: custom
 //console.log(stats.dom.outerHTML);
@@ -55,7 +56,8 @@ let uniforms = {
     }
 };
 
-// Click Listeners
+
+//#region Click Listeners
 let cursor = document.getElementById('cursor');
 cursor.addEventListener("click", advanceScene);
 
@@ -70,6 +72,54 @@ startButton.addEventListener("click", function () {
         }
     });
 });
+
+let previousButton = document.getElementById('previous');
+previousButton.addEventListener("click", function () {
+    console.log('going to previous page', 'color: lightgreen');
+    previousScene();
+});
+let skipButton = document.getElementById('skip');
+skipButton.addEventListener("click", function () {
+    console.log('skipping to next page', 'color: lightgreen');
+    advanceScene();
+});
+let restartButton = document.getElementById('restart');
+restartButton.addEventListener("click", function () {
+    console.log('restarting book', 'color: lightgreen');
+    restartScene();
+});
+
+let part1Button = document.getElementById('p1');
+part1Button.addEventListener("click", function () {
+    console.log('going to previous page', 'color: lightgreen');
+    part1Button.classList.remove('active');
+    part2Button.classList.remove('active');
+    part3Button.classList.remove('active');
+
+    part1Button.classList.add('active');
+    goToScene(0);
+});
+let part2Button = document.getElementById('p2');
+part2Button.addEventListener("click", function () {
+    console.log('going part 2', 'color: lightgreen');
+    part1Button.classList.remove('active');
+    part2Button.classList.remove('active');
+    part3Button.classList.remove('active');
+
+    part2Button.classList.add('active');
+    goToScene(4);
+});
+let part3Button = document.getElementById('p3');
+part3Button.addEventListener("click", function () {
+    console.log('going part 3', 'color: lightgreen');
+    part1Button.classList.remove('active');
+    part2Button.classList.remove('active');
+    part3Button.classList.remove('active');
+
+    part3Button.classList.add('active');
+    goToScene(12);
+});
+//#endregion
 
 //#endregion
 
@@ -695,6 +745,9 @@ function switchGLTFAnims(model, newClip) {
 /**
  * INIT SCENE
  */
+//follow mouse
+let mouseX, mouseY;
+let targetX, targetY;
 function initScene() {
     //#region LISTENERS/SIZE
     /**
@@ -722,6 +775,14 @@ function initScene() {
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
         //effectComposer.setSize(sizes.width, sizes.height)
     })
+
+    //follow mouse
+    function onDocumentMouseMove(event) {
+
+        mouseX = (event.clientX - windowHalfX);
+        mouseY = (event.clientY - windowHalfY);
+
+    }
 
     //#endregion
 
@@ -1781,6 +1842,16 @@ function initTimeline() {
             advanceScene();
         }
     }, 'nextScene');
+    gui.add({
+        previousScene: function () {
+            previousScene();
+        }
+    }, 'previousScene');
+    gui.add({
+        restart: function () {
+            restartScene();
+        }
+    }, 'restart');
     //#endregion
 
     /* gsapT1.timeScale(2);
@@ -1805,6 +1876,36 @@ function advanceScene() {
         swapNarration(allNarration[activeSceneNum].innerHTML);
         playScene(timelineClips[activeSceneNum], activeSceneNum)
     }
+}
+
+function previousScene() {
+    cursor.style.display = 'none';
+
+    if (activeSceneNum > 0) {
+        activeSceneNum--;
+        //handle <p> swap for narration
+        swapNarration(allNarration[activeSceneNum].innerHTML);
+        //handle fade out, layers, and cursor
+        playScene(timelineClips[activeSceneNum], activeSceneNum)
+    } else {
+        activeSceneNum = 0;
+        swapNarration(allNarration[activeSceneNum].innerHTML);
+        playScene(timelineClips[activeSceneNum], activeSceneNum)
+    }
+}
+
+function restartScene() {
+    cursor.style.display = 'none';
+    activeSceneNum = 0;
+    swapNarration(allNarration[activeSceneNum].innerHTML);
+    playScene(timelineClips[activeSceneNum], activeSceneNum)
+}
+
+function goToScene(sceneNum) {
+    cursor.style.display = 'none';
+    activeSceneNum = sceneNum;
+    swapNarration(allNarration[activeSceneNum].innerHTML);
+    playScene(timelineClips[activeSceneNum], activeSceneNum)
 }
 
 function playScene(sceneObj, layerNum) {
@@ -1957,6 +2058,8 @@ function spliceString(str, substr) {
  * Animate
  */
 
+const windowHalfX = window.innerWidth / 2;
+const windowHalfY = window.innerHeight / 2;
 const tick = () => {
 
     //#region BASIC
@@ -1996,6 +2099,19 @@ const tick = () => {
     }
 
     //#endregion
+
+    // rotate camera with mouse loc
+
+
+    //follow mouse
+    /* targetX = mouseX * .001;
+    targetY = mouseY * .001;
+
+    camera.rotation.y += 0.05 * (targetX - camera.rotation.y);
+    camera.rotation.x += 0.05 * (targetY - camera.rotation.x);
+
+    console.log(camera.rotation); */
+
 
 
 

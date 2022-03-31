@@ -30,6 +30,10 @@
     </div>
 
     <div id="splash">
+        <video playsinline autoplay muted loop>
+            <source src="/Users/aarongreider/Desktop/CODE/Alchemist/src/starmap.mp4" type="video/mp4">
+        </video>
+
         <div>
             <h1>The Alchemist</h1>
             <p>This web-storybook is based on the classic inspirational novel by Paulo Coelho.
@@ -40,10 +44,6 @@
             </p>
             <button>BEGIN</button>
         </div>
-
-        <!-- <video playsinline autoplay muted loop>
-            <source src="movie.mp4" type="video/mp4">
-        </video> -->
     </div>
 
 
@@ -61,23 +61,23 @@
             <img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/ham.png">
             <!-- <img src="/Users/aarongreider/Desktop/CODE/Alchemist/static/html/ham.png"> -->
             <p class="noHover">
-                <span id="active">part i, <i>The Desert</i></span>
+                <span id="p1" class="active">part i, <i>The Desert</i></span>
                 <span class="line">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                <span>part ii, <i>The Falcon</i></span>
+                <span id="p2">part ii, <i>The Falcon</i></span>
                 <span class="line">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                <span>part iii, <i>The Wind</i></span>
+                <span id="p3">part iii, <i>The Wind</i></span>
             </p>
         </div>
 
-        <div>
+        <div id="previous">
             <img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/previous.png">
             <p>previous</p>
         </div>
-        <div>
+        <div id="skip">
             <img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/skip.png">
             <p>skip</p>
         </div>
-        <div>
+        <div id="restart">
             <img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/restart.png">
             <p>restart</p>
         </div>
