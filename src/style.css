@@ -64,6 +64,10 @@ body
     top: 82vh;
     left: 84vw;
 
+    display: flex;
+    justify-content: center;
+    align-content: center;
+
     transform-origin: center;
     animation: blink .85s infinite;
     animation-direction: alternate;
@@ -71,21 +75,42 @@ body
     display: none;
 }
 
+#cursor div {
+    height: 50%;
+    width: 50%;
+    outline: 2px whitesmoke;
+    background-color: none;
+    
+    display: flex;
+    justify-content: center;
+    align-content: center;
+
+    transform-origin: center;
+    animation: blink .85s infinite;
+    animation-direction: alternate;
+}
+
 
 #splash {
-    width: 100%;
-    height: 100%;
-    padding: 0 5vw;
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
     
     background-color: black;
 
-    position: absolute;
+    z-index: 10;
+
+    background-image: url("https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/splash_bg.jpg");
+    background-size: cover;
+}
+
+#splash div {
+    margin: 0 5vw;
+
     display: flex;
     flex-flow: column nowrap;
     justify-content: flex-start;
     align-items: flex-start;
-
-    z-index: 10;
 }
 
 #splash h1 {
@@ -169,6 +194,18 @@ p i {
     align-items: flex-start;
 
     z-index: 5;
+}
+#UI *, button {
+    cursor: pointer;
+    transition: transform .25s, opacity .25s;
+    transition-timing-function: ease-out;
+}
+#UI p:hover:not(.noHover),#UI img:hover, button:hover {
+    transform: scale(1.05); 
+}
+
+#UI span:hover:not(.line) {
+    opacity: 1;
 }
 
 #UI p {
