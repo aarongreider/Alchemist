@@ -214,7 +214,7 @@ function initObjects() {
     phongMat.name = `phong mat`;
     mats.push(phongMat);
 
-    const txtMat = new THREE.MeshBasicMaterial({
+    const checkMat = new THREE.MeshBasicMaterial({
         map: checkTxt,
         side: THREE.DoubleSide
     });
@@ -226,6 +226,15 @@ function initObjects() {
     });
     wireMat.name = `wireframe mat`;
     mats.push(wireMat);
+
+    const rockMat = new THREE.MeshStandardMaterial({
+        wireframe: false,
+        opacity: 1,
+        transparent: true,
+        map: txtLoader.load(`rock_diffuse.jpg`),
+    });
+    rockMat.name = `rock diffuse mat`;
+    mats.push(rockMat);
 
     const sandWispMat = new THREE.MeshBasicMaterial({
         map: wispTxt,
@@ -419,7 +428,7 @@ function initObjects() {
                     //console.log("child flower name: " + child.name);
                     child.material = flowerMat;
                 } else {
-                    child.material = wireMat;
+                    child.material = rockMat;
                 }
             }
         });
@@ -942,17 +951,16 @@ function initTimeline() {
                 girlModel.traverse(child => {
                     if (child.material) {
                         child.material.transparent = true;
-                        gsapT1.to(child.material, { duration: .01, opacity: 0 }, '<');
+                        child.material.opacity = 0;
                     };
-                    //console.log(`%c FADE OUT GIRL SCENE 3`, 'color: #00FFE3')
+                    console.log(`%c FADE OUT GIRL SCENE 3`, 'color: #00FFE3')
                 });
 
                 // set initial camera rotation/position
-                gsapT1.to(camera.position, { duration: 0, x: -1.3 }, `<`);
-                gsapT1.to(camera.position, { duration: 0, y: .55 }, `<`);
-                gsapT1.to(camera.position, { duration: 0, z: 2.55 }, `<`);
-                gsapT1.call(function () {
-                    camera.lookAt(new THREE.Vector3(.5, .5, 0));
+                gsapT1.to(camera.position, {
+                    duration: 0, x: -2, y: 0, z: 1.75
+                }, `<`).call(function () {
+                    camera.lookAt(new THREE.Vector3(0, 1, .5));
                 })
 
                 // filler
@@ -1918,12 +1926,16 @@ function playScene(sceneObj, layerNum) {
     // fade out mats
     if (!fadeOverride) { fadeMats(mats, gltfModels, 0, .5); }
 
+    // set initital ready positions
+    /* sceneObj.readyPositions(); */
+
     // assign layers
     gsapT3.call(function () { assignLayers(sceneObj, layerNum) });
 
     // set repeat and play animations
     gsapT1.repeat(sceneObj.repeat);
 
+    // reset fade override and play the scene
     gsapT3.call(function () {
         fadeOverride = false;
         sceneObj.playActions();
