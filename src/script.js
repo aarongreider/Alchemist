@@ -2229,10 +2229,10 @@ function spliceString(str, substr) {
 /**
  * Animate
  */
-/* const mouseObj = new THREE.Vector2();
+const mouseObj = new THREE.Vector2();
 const targetMod = new THREE.Vector2();
 const cameraInitial = new THREE.Vector2();
-
+/* 
 document.addEventListener('mousemove', onMouseMove, false);
 
 function onMouseMove(event) {
