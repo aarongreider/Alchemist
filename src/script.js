@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'dat.gui'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-import { AnimationMixer, BlendingSrcFactor, DstAlphaFactor, MathUtils, Object3D, OneFactor, PCFShadowMap, SkeletonHelper, SrcAlphaFactor, SubtractEquation } from 'three'
+import { AnimationMixer, BlendingSrcFactor, DstAlphaFactor, MathUtils, Object3D, OneFactor, PCFShadowMap, SkeletonHelper, SrcAlphaFactor, SubtractEquation, Vector3 } from 'three'
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { SelectiveBloomEffect, BloomEffect, EffectComposer, EffectPass, RenderPass } from "postprocessing";
 import { Water } from 'three/examples/jsm/objects/water2.js';
@@ -18,6 +18,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
  */
 import { gsap } from 'gsap/all';
+//import { CustomEase } from "gsap/CustomEase";
 import { radToDeg } from 'three/src/math/MathUtils'
 //#endregion
 
@@ -158,10 +159,12 @@ let sceneCompleted = true;
     this.clip = clip;
 } */
 
-function timelineObj(name, repeat, actors, playActions) {
+function timelineObj(name, repeat, actors, readyPositions, playTransition, playActions) {
     this.name = name;
     this.repeat = repeat;
     this.actors = actors;
+    this.readyPositions = readyPositions;
+    this.playTransition = playTransition;
     this.playActions = playActions;
 }
 const timelineClips = [];
@@ -177,6 +180,8 @@ let gsapT3 = gsap.timeline({ repeat: 0 });
 let controls, camera, renderer;
 let meshLoaded = false, mixerLoaded = false, isRotating = true, canBegin = false;
 
+let rotObj = new Object3D();
+scene.add(rotObj);
 //#endregion
 
 /**
@@ -389,7 +394,7 @@ function initObjects() {
         //set transforms
         windWispModel.scale.set(1, 1, 1);
         windWispModel.position.set(0, 0, -2);
-        console.log(`%c ${windWispModel}`, `color: #e26f03`)
+        //console.log(`%c ${windWispModel}`, `color: #e26f03`)
 
         //let geometries = [];
 
@@ -782,7 +787,10 @@ function initScene() {
         // Update renderer
         renderer.setSize(sizes.width, sizes.height)
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-        //effectComposer.setSize(sizes.width, sizes.height)
+        effectComposer.setSize(sizes.width, sizes.height)
+
+        bloomPass.blurPass.width = sizes.width;
+        bloomPass.blurPass.height = sizes.height;
     })
 
     //follow mouse
@@ -851,7 +859,11 @@ function initScene() {
     //#endregion
 
     // Load GUI Items
-
+    const folder3 = gui.addFolder('bloom controls');
+    folder3.add(bloomPass.blurPass, "scale").min(0).max(50);
+    folder3.add(bloomPass.blurPass, "width").min(0).max(1080);
+    folder3.add(bloomPass.blurPass, "height").min(-25).max(1080);
+    folder3.add(bloomPass, 'intensity').min(-25).max(100);
 }
 
 /**
@@ -865,30 +877,42 @@ function initTimeline() {
         new timelineObj(
             'zoom through rocks to flower', 0,
             [flowerModel, boyModel, sandWispModel],
+            //#region anims
+            // ready positions
             function () {
-                //camera.rotation.x += (Math.PI / 180);
-                //camera.rotateOnWorldAxis(new THREE.Vector3(0.0, 1.0, 0.0), 3)
+                // cycle through all actors and set their inital positions
+                flowerModel.position.set(0, 0, 0);
+                boyModel.position.set(0, 0, 0);
+                sandWispModel.position.set(-1, 0, -1);
 
-                gsapT1.clear();
-                gsapT1.call(function () {
-                    switchGLTFAnims(boyModel, sitting_NLA);
+                switchGLTFAnims(boyModel, sitting_NLA);
+
+                //gsapT1.to(camera.position, { duration: .1, z: -1.75, y: .35, x: -.75 });
+                camera.position.set(-.75, .35, -1.75);
+
+                let pos;
+                flowerModel.traverse(function (child) {
+                    if (child.name.includes("flower")) {
+                        pos = child.position;
+                        camera.lookAt(pos);
+                    }
                 })
 
-                //initial camera pos
-                gsapT1.call(function () {
-                    let pos;
-                    flowerModel.traverse(function (child) {
-                        if (child.name.includes("flower")) {
-                            pos = child.position;
-                            camera.lookAt(pos);
-                        }
-                    })
-                });
-                gsapT1.to(camera.position, { duration: .1, z: -1.75 }, `<`);
-                gsapT1.to(camera.position, { duration: .1, y: .35 }, `<`);
-                gsapT1.to(camera.position, { duration: .1, x: -.75 }, `<`);
-                gsapT1.to(camera.position, { duration: 2, x: -.75 }); //stall for 2s
-                //gsapT1.call(function () { gsapT1.pause(); });
+                bloomPass.intensity = 2;
+                bloomPass.luminanceThreshold = .5;
+                bloomPass.blurPass.scale = 1;
+                bloomPass.blurPass.width = window.innerWidth;
+                bloomPass.blurPass.height = window.innerHeight;
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, .75);
+            },
+            // play actions
+            function () {
+                gsapT1.clear();
+
+                gsapT1.to({}, { duration: 2, }); //stall for 2s
 
                 //to camera pos
                 gsapT1.to(camera.position, { duration: 10, ease: "power2.inOut", z: 21.75 },);
@@ -896,31 +920,42 @@ function initTimeline() {
 
 
                 // false = fade out | true = custom transition handler
-                gsapT1.call(function () { fadeOverride = true });
+                //gsapT1.call(function () { fadeOverride = true });
             }
+            //#endregion
         ),
         new timelineObj(
             'obscure flower and fade in boy', 0,
-            [flowerModel, boyModel, sandWispModel],
+            [flowerModel, boyModel, sandWispModel, axesHelper],
+            //#region anims
+            // ready positions
+            function () {
+                flowerModel.position.set(0, 0, 0);
+                boyModel.position.set(0, 0, 0);
+                sandWispModel.position.set(-1, 0, -1);
+
+                switchGLTFAnims(boyModel, sitting_NLA);
+                boyMixer.clipAction(boyAnimations[5]).play();
+
+
+                camera.position.set(-.25, .7, 2);
+                //camera.lookAt(new THREE.Vector3(20, 20, 20));
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, 1);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
-                gsapT1.call(function () {
-                    switchGLTFAnims(boyModel, sitting_NLA);
-                })
-                mats.forEach(mat => {
+
+                /* mats.forEach(mat => {
                     gsapT1.to(mat, { duration: .5, opacity: 0 }, '<');
-                });
+                }); */
 
-                gsapT1.to(camera.position, { duration: 2, ease: "power2.inOut", z: 2.5 });
-                gsapT1.to(camera.position, { duration: 2, ease: "power2.inOut", x: -.5 }, `<`);
-                gsapT1.to(camera.position, { duration: 2, ease: "power2.inOut", y: -.25 }, `<`);
-
-                /* gsapT1.to(camera.rotation, { duration: 2, ease: "power2.inOut", x: -1 });
-                gsapT1.to(camera.rotation, { duration: 2, ease: "power2.inOut", y: .5 }, `<`); */
-                //gsapT1.to(camera.rotation, { duration: 2, ease: "power2.inOut", z: -1 }, `<`);
                 // lerp lookat() function
                 let vecFrom = camera.getWorldDirection(new THREE.Vector3());
-                let vecTo = new THREE.Vector3(-1, .5, 0);
+                let vecTo = new THREE.Vector3(1.35, 0, 0);
                 let state;
                 gsapT1.to({}, {
                     duration: 2, ease: "power2.inOut",
@@ -937,36 +972,42 @@ function initTimeline() {
                     gsapT1.to(mat, { duration: 1, opacity: 1 }, '<');
                 });
             }
+            //#endregion
         ),
         new timelineObj(
             'fade girl and blow kiss', 0,
             [boyModel, girlModel, axesHelper],
+            //#region anims
+            // ready positions
             function () {
-                gsapT1.clear();
-                gsapT1.call(function () {
-                    switchGLTFAnims(boyModel, sitting_NLA);
-                });
+                boyModel.position.set(0, 0, 0);
+                girlModel.position.set(-.6, 0, 2);
 
-                // make this fade out girl at some point
+                switchGLTFAnims(boyModel, sitting_NLA);
+
+                camera.position.set(-2, .25, .6);
+                camera.lookAt(new THREE.Vector3(0, .5, 1));
+
+                // fade out girl
                 girlModel.traverse(child => {
                     if (child.material) {
                         child.material.transparent = true;
-                        child.material.opacity = 0;
+                        child.material.opacity = .75;
                     };
-                    console.log(`%c FADE OUT GIRL SCENE 3`, 'color: #00FFE3')
+                    //console.log(`%c FADE OUT GIRL SCENE 3`, 'color: #00FFE3')
                 });
+            },
+            // play transition
+            function () {
+                fadeMats(mats, [boyModel, axesHelper], 1, 1);
+            },
+            function () {
+                gsapT1.clear();
 
-                // set initial camera rotation/position
-                gsapT1.to(camera.position, {
-                    duration: 0, x: -2, y: 0, z: 1.75
-                }, `<`).call(function () {
-                    camera.lookAt(new THREE.Vector3(0, 1, .5));
-                })
+                gsapT1.to({}, { duration: 3 }); //filler
+                gsapT1.to({}, { duration: 1 }); //filler
 
-                // filler
-                gsapT1.to(sphereMesh.position, { duration: 3, x: sphereMesh.position }); //filler
-                gsapT1.to(sphereMesh.position, { duration: 1, x: sphereMesh.position }); //filler
-
+                // fade girl in
                 girlModel.traverse(child => {
                     if (child.material) {
                         child.material.transparent = true;
@@ -975,98 +1016,132 @@ function initTimeline() {
                     //console.log(`%c FADE OUT GIRL SCENE 3`, 'color: #00FFE3')
                 });
             }
+            //#endregion
         ),
         new timelineObj(
             'boy turns into wind', 0,
             [windWispModel, boyModel],
+            //#region anims
+            // ready positions
+            function () {
+                boyModel.position.set(0, 0, 0);
+                windWispModel.position.set(0, 0, -2);
+
+                switchGLTFAnims(boyModel, sitting_NLA);
+
+                camera.position.set(-2.25, 0, .5);
+                camera.lookAt(new THREE.Vector3(0, .5, .5));
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, 1.25);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
-                gsapT1.call(function () {
-                    switchGLTFAnims(boyModel, sitting_NLA);
-                })
-
-                gsapT1.to(camera.position, {
-                    duration: .1, x: -2.25, y: 0, z: .5, onUpdate: function () {
-                        camera.lookAt(new THREE.Vector3(0, .5, .5));
-                    }
-                }, `<`);
-
-
-                gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z + 6 });
-                gsapT1.to(boxMesh.rotation, { duration: 1, z: boxMesh.rotation.z });
             }
+            //#endregion
         ),
         new timelineObj(
             'heart fades in and rotates', 0,
             [heartModel],
+            //#region anims
+            // ready positions
+            function () {
+                heartModel.position.set(0, 0, 0);
+                heartModel.scale.set(1, 1, 1);
+
+                camera.position.set(0, .55, -2);
+                camera.lookAt(new THREE.Vector3(0, .5, 0));
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, 1.25);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
-                gsapT1.call(function () {
-
-                })
-                gsapT1.to(camera.position, {
-                    duration: .1, x: 0, y: .55, z: -2, onUpdate: function () {
-                        camera.lookAt(new THREE.Vector3(0, .5, 0));
-                    }
-                });
 
                 //heart fade in and rotate
 
             }
+            //#endregion
         ),
         new timelineObj(
             'bird glides in', 0,
             [birdModel],
+            //#region anims
+            // ready positions
+            function () {
+                birdModel.position.set(0, 0, 0);
+                birdModel.rotation.set(0, 0, 0);
+
+                switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[2]))
+
+                camera.position.set(.25, .25, -1);
+                camera.lookAt(new THREE.Vector3(0, 0, 0));
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, 1.25);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
                 gsapT1_2.clear();
 
-                gsapT1.to(camera.position, { duration: 0, x: .25 }, `<`);
-                gsapT1.to(camera.position, { duration: 0, y: .55 }, `<`);
-                gsapT1.to(camera.position, { duration: 0, z: -1 }, `<`);
-                gsapT1.call(function () {
-                    camera.lookAt(new THREE.Vector3(0, 0, 0));
-                })
-
-                // bird flap
+                //#region bird flap
                 gsapT1_2.call(function () {
                     switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[2]))
                 })
 
-                // filler
-                gsapT1_2.to(sphereMesh.position, { duration: 5, x: sphereMesh.position }); //filler
-
-                gsapT1_2.call(function () {
+                gsapT1_2.to({}, { duration: 5 }).call(function () {
                     switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
                 })
 
-                // filler
-                gsapT1_2.to(sphereMesh.position, { duration: 3, x: sphereMesh.position }); //filler
-
-                gsapT1_2.call(function () {
+                gsapT1_2.to({}, { duration: 3, }).call(function () {
                     switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
                 })
+                //#endregion
 
                 // false = fade out | true = custom transition handler
-                gsapT1.call(function () { fadeOverride = true });
-
+                //gsapT1.call(function () { fadeOverride = true });
             }
+            //#endregion
         ),
         new timelineObj(
-            'camera pans around bird', -1,
-            [birdModel, flowerModel,],
+            'camera pans around bird', 0,
+            [birdModel, flowerModel],
+            //#region anims
+            // ready positions
+            function () {
+                birdModel.position.set(0, 0, 0);
+                birdModel.rotation.set(0, 0, 0);
+
+                rotObj.rotation.set(0, 0, 0);
+                rotObj.position.set(0, 0, 0);
+
+                flowerModel.position.set(0, -10, 0);
+                flowerModel.traverse(child => {
+                    if (child.material) {
+                        child.material.transparent = true;
+                        child.material.opacity = 0;
+                    };
+                });
+
+                switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[2]))
+
+                camera.position.set(.25, .25, -1);
+                camera.lookAt(new THREE.Vector3(0, 0, 0));
+            },
+            // play transition
+            function () {
+                fadeMats(mats, [birdModel, flowerModel], 1, .75);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
                 gsapT1_2.clear();
-
-                gsapT1.to(camera.position, { duration: 0, x: .25 }, `<`);
-                gsapT1.to(camera.position, { duration: 0, y: .55 }, `<`);
-                gsapT1.to(camera.position, { duration: 0, z: -1 }, `<`);
-                gsapT1.call(function () {
-                    camera.lookAt(new THREE.Vector3(0, 0, 0));
-                })
-
-                flowerModel.position.y = -10;
 
                 //#region bird flap
                 gsapT1_2.call(function () {
@@ -1088,37 +1163,40 @@ function initTimeline() {
                 })
                 //#endregion
 
-
-                //camera pan
-                //make new object 3d
-                //make camera a child of rotObj
-                let rotObj = new Object3D();
-                scene.add(rotObj);
+                //camera pan with rotObj parent
+                /* let rotObj = new Object3D();
+                scene.add(rotObj); */
                 rotObj.add(camera);
 
-                gsapT1.to(rotObj.rotation, { duration: 18, ease: "linear", y: 6.28319 });
-
+                //let customEase = CustomEase.create("custom", "M0,0 C0,0 0.053,0.009 0.084,0.04 0.145,0.102 0.864,0.923 0.918,0.972 0.94,0.992 1,1 1,1 ");
+                gsapT1.to(rotObj.rotation, { duration: 18, y: 6.28319, ease: 'linear', })
 
                 // false = fade out | true = custom transition handler
-                gsapT1.call(function () { fadeOverride = true });
+                //gsapT1.call(function () { fadeOverride = true });
             }
+            //#endregion
         ),
         new timelineObj(
             'bird is sand', 0,
             [birdModel],
+            //#region anims
+            // ready positions
+            function () {
+                //birdModel.position.set(0, 0, 0);
+                rotObj.rotation.set(0, 0, 0);
+                rotObj.position.set(0, 0, 0);
+
+                camera.position.set(.25, .25, -1);
+                camera.lookAt(new THREE.Vector3(0, 0, 0));
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, .75);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
                 gsapT1_2.clear();
-
-                //init pos
-                gsapT1.to(camera.position, { duration: 2, x: .25 });
-                gsapT1.to(camera.position, { duration: 2, y: .25 }, `<`);
-                gsapT1.to(camera.position, {
-                    duration: 2, ease: "power2.inOut", z: -.5,
-                    onUpdate: function () {
-                        camera.lookAt(new THREE.Vector3(0, 0, 0));
-                    }
-                }, `<`);
 
 
                 //#region bird flap
@@ -1126,17 +1204,11 @@ function initTimeline() {
                     switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[2]))
                 })
 
-                // filler
-                gsapT1_2.to(sphereMesh.position, { duration: (Math.random() * 5 + 2), x: sphereMesh.position }); //filler
-
-                gsapT1_2.call(function () {
+                gsapT1_2.to({}, { duration: (Math.random() * 5 + 2) }).call(function () {
                     switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
                 })
 
-                // filler
-                gsapT1_2.to(sphereMesh.position, { duration: (Math.random() * 5 + 1), x: sphereMesh.position }); //filler
-
-                gsapT1_2.call(function () {
+                gsapT1_2.to({}, { duration: (Math.random() * 5 + 1), }).call(function () {
                     switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
                 })
                 //#endregion
@@ -1152,15 +1224,11 @@ function initTimeline() {
                     vertices.push(x, y, z);
                 }
 
-                /* const buffGeometry = new THREE.BufferGeometry();
-                buffGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-                buffGeometry.attributes.position.needsUpdate = true; */
-
                 const material = new THREE.PointsMaterial({
                     color: 0x888888,
                     size: .0025,
                     transparent: true,
-                    opacity: 0,
+                    opacity: 1,
                 });
                 /* const points = new THREE.Points(buffGeometry, material); */
 
@@ -1172,53 +1240,51 @@ function initTimeline() {
                 scene.add(points);
                 points.layers.set(activeSceneNum);
 
-
-                class particleSystem {
-                    constructor(_geometry, _uniforms, _vertices) {
-                        this._geometry = geometry;
-                        this._vertices = vertices;
-
-                        this._material = new THREE.ShaderMaterial({
-                            uniforms: _uniforms,
-                            vertexShader: document.getElementById(`vertexParticleShader`),
-                            fragmentShader: document.getElementById(`fragmentSimulation`),
-                        });
-
-                        this._points = new THREE.Points(_geometry, _material);
-                        this.updateGeometry()
-                    }
-
-                    updateGeometry() {
-
-                        this._geometry.setAttribute('position', new THREE.Float32BufferAttribute(this._vertices, 3));
-                        this._geometry.attributes.position.needsUpdate = true;
-                    }
-
-                    updateParticles() {
-
-                    }
-                }
+                /* class particleSystem {
+                                constructor(_geometry, _uniforms, _vertices) {
+                                    this._geometry = geometry;
+                                    this._vertices = vertices;
+            
+                                    this._material = new THREE.ShaderMaterial({
+                                        uniforms: _uniforms,
+                                        vertexShader: document.getElementById(`vertexParticleShader`),
+                                        fragmentShader: document.getElementById(`fragmentSimulation`),
+                                    });
+            
+                                    this._points = new THREE.Points(_geometry, _material);
+                                    this.updateGeometry()
+                                }
+            
+                                updateGeometry() {
+            
+                                    this._geometry.setAttribute('position', new THREE.Float32BufferAttribute(this._vertices, 3));
+                                    this._geometry.attributes.position.needsUpdate = true;
+                                }
+            
+                                updateParticles() {
+            
+                                }
+                            } */
                 //#endregion
 
                 //camera pan
-                let rotObj = new Object3D();
-                scene.add(rotObj);
                 rotObj.add(camera);
 
-                gsapT1.to(rotObj.rotation, { duration: 12, ease: "linear", y: degToRad(360) });
+                gsapT1.to(rotObj.rotation, {
+                    duration: 12, ease: "linear", y: degToRad(360),
+                })
                 gsapT1.to(rotObj.position, {
                     duration: 8, ease: "linear", y: 1, onUpdate: function () {
                         camera.lookAt(new THREE.Vector3(0, 0, 0));
                     }
                 }, `<`);
-                //gsapT1.to(rotObj.rotation, { duration: 18, ease: "linear", x: degToRad(45) }, `<`);
                 gsapT1.to(material, { duration: 1, opacity: 1 }, '<');
 
                 // move particles in random direction and update buffer??? see pevious versions
 
                 // generate 5000 particles every frame
-                gsapT1.to({}, {
-                    duration: 3, ease: "power2.inOut",
+                gsapT1_2.to({}, {
+                    duration: 10, ease: "power2.inOut",
                     onUpdate: function () {
                         scene.remove(points);
                         //fromVal.lerp(toVal, this.progress());
@@ -1240,15 +1306,28 @@ function initTimeline() {
                         points.layers.set(activeSceneNum);
                         //console.log(this.progress());
                     }
-                }, `<`);
+                }, 0);
 
                 //sceneCompleted = true;
-                gsapT1.call(function () { fadeOverride = true });
+                //gsapT1.call(function () { fadeOverride = true });
             }
+            //#endregion
         ),
-        new timelineObj(
-            'bird is water', 0,
+        new timelineObj('bird is water', 0,
             [birdModel, water],
+            //#region anims
+            // ready positions
+            function () {
+                camera.rotation.set()
+                camera.position.set(.25, 2, -1);
+                camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+                birdModel.rotation.set(0, 0, 0);
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, 3);
+            },
             function () {
                 gsapT1.clear();
                 gsapT1_2.clear();
@@ -1263,16 +1342,6 @@ function initTimeline() {
 
                 let obj = { 'actors': [water, birdModel] };
                 assignLayers(obj, 0);
-
-                //init pos — DONT INIT POS
-                /* gsapT1.to(camera.position, { duration: 0, x: 0 }, `<`);
-                gsapT1.to(camera.position, { duration: 0, y: 1 }, `<`);
-                gsapT1.to(camera.position, {
-                    duration: 0, ease: "power2.inOut", z: 0,
-                    onUpdate: function () {
-                        camera.lookAt(new THREE.Vector3(0, -2, 0));
-                    }
-                }, `<`); */
 
 
                 //#region bird and bird2 flap
@@ -1296,10 +1365,9 @@ function initTimeline() {
                 //#endregion
 
 
-                //slowly move bird1 below water
-                //gsapT1.to(birdModel.position, { duration: 5, y: -.25 });
-
-                //gsapT1.to(birdModel.rotation, { duration: 3, x: degToRad(180) }, `<`);
+                // TEST_slowly move bird1 below water
+                /* gsapT1.to(birdModel.position, { duration: 5, y: -.5 });
+                gsapT1.to(birdModel.position, { duration: 5, y: 1.25 }); */
 
                 //T1 to animate scale of water
                 /* let valFrom = 0;
@@ -1311,15 +1379,45 @@ function initTimeline() {
                         //console.log(`water scale ` + this.progress());
                     }
                 }, '<'); */
-                gsapT1.call(function () { fadeOverride = true });
+
+                //gsapT1.call(function () { fadeOverride = true });
             }
+            //#endregion
         ),
         new timelineObj(
-            'bird2 flies away with fish', 0,
+            'bird2 catches fish', 0,
             [birdModel, water],
+            //#region anims
+            // ready positions
+            function () {
+                // fade out fish and set position
+                mats[mats.length - 1].opacity = 0;
+                fishModel.position.set(0, .25, -1);
+
+                birdModel.position.set(0, 0, 0);
+                //birdModel.rotation.set(new THREE.Vector3(degToRad(180), degToRad(180), 0));
+
+                bird2Model.position.set(1, 3, -25);
+
+                // fade bird1 to .5
+                birdModel.traverse(child => {
+                    if (child.material) {
+                        child.material.transparent = true;
+                        child.material.opacity = .5;
+                        console.log(child.material.opacity);
+                    };
+                });
+            },
+            // play transition
+            function () {
+                fadeMats(null, [bird2Model], 1, .75);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
                 gsapT1_2.clear();
+
+                gsapT1.to(birdModel.rotation, { duration: .1, x: degToRad(180), y: degToRad(180) }, '<');
 
                 // disable all layers and set active to layer 0
                 // TODO: toggle this part off for cool reflection|layer exploit
@@ -1328,22 +1426,6 @@ function initTimeline() {
                         child.layers.disableAll();
                     }
                 });
-
-                // fade out fish and set position
-                gsapT1.to(mats[mats.length - 1], { duration: .1, opacity: 0, });
-                gsapT1.to(fishModel.position, { duration: .1, x: 0, y: .25, z: -1, }, `<`);
-                // init bird2 position
-                gsapT1.to(bird2Model.position, { duration: .1, x: 1, y: 3, z: -25 }, '<');
-
-                // fade bird1 to .5
-                birdModel.traverse(child => {
-                    if (child.material) {
-                        child.material.transparent = true;
-                        gsapT1.to(child.material, { duration: .1, opacity: .5 }, '<');
-                    };
-                });
-                // rotate bird1 to 180
-                gsapT1.to(birdModel.rotation, { duration: .1, x: degToRad(180), y: degToRad(180) }, '<');
 
                 // enable actors to layer
                 let obj = { 'actors': [water, birdModel, bird2Model, fishModel] };
@@ -1436,7 +1518,7 @@ function initTimeline() {
                     x: .45, y: 0.85, z: 1,
                 }, `fishEnter`);
 
-                gsapT1.call(function () { fadeOverride = true });
+                //gsapT1.call(function () { fadeOverride = true });
 
                 // fly away with fish
                 let birdFishPos = [0, 2, 5];
@@ -1450,10 +1532,32 @@ function initTimeline() {
                     x: birdFishPos[0] - .44, y: birdFishPos[1] - .535, z: birdFishPos[2] - 2.1,
                 }, `fishExit`);
             }
+            //#endregion
         ),
         new timelineObj(
             'pan to watch bird2', 0,
             [water, birdModel, bird2Model, fishModel],
+            //#region anims
+            // ready positions
+            function () {
+                gsapT1.clear();
+                camera.position.set(1, 2, -1.5);
+                camera.lookAt(new THREE.Vector3(0, .25, 0));
+
+                fishModel.activeClip.paused = true;
+                fishMixer.setTime(0);
+
+                // init bird2 Pos and fish pos at mixerTime = 0
+                let birdFishPos = [0, 1.75, 2];
+
+                bird2Model.position.set(birdFishPos[0], birdFishPos[1], birdFishPos[2]);
+                fishModel.position.set(birdFishPos[0] + .25, birdFishPos[1] - .05, birdFishPos[2] - .25)
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, .75);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
                 //gsapT1_2.clear();
@@ -1470,7 +1574,7 @@ function initTimeline() {
                 let obj = { 'actors': [water, birdModel, bird2Model, fishModel] };
                 gsapT1.call(assignLayers(obj, 0));
 
-                //init pos
+                //init camera pos
                 let vecFrom = camera.getWorldDirection(new THREE.Vector3());
                 let vecTo = new THREE.Vector3(0, 2, 10);
                 gsapT1.to({}, {
@@ -1482,7 +1586,7 @@ function initTimeline() {
                 });
 
                 // init birdPos 2
-                let birdFishPos = [0, 1.75, 2];
+                /* let birdFishPos = [0, 1.75, 2];
                 let birdFishDur = .1;
                 gsapT1.to(bird2Model.position, {
                     duration: birdFishDur, ease: `power1.out`,
@@ -1491,7 +1595,7 @@ function initTimeline() {
                 gsapT1.to(fishModel.position, {
                     duration: birdFishDur, ease: `power1.out`,
                     x: birdFishPos[0] - .44, y: birdFishPos[1] - .535, z: birdFishPos[2] - 2.1,
-                }, `<`);
+                }, `<`); */
 
                 //#region bird2 flap
                 gsapT1_2.call(function () {
@@ -1513,10 +1617,24 @@ function initTimeline() {
                 })
                 //#endregion
             }
+            //#endregion
         ),
         new timelineObj(
             'trees grow in wake of bird', 0,
             [bird2Model, fishModel, treeModel],
+            //#region anims
+            // ready positions
+            function () {
+                camera.position.set(1, 2, -1.5);
+                camera.lookAt(new THREE.Vector3(0, .25, 0));
+
+                treeMixer.setTime(0);
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, 1.25);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
                 gsapT1_2.clear();
@@ -1532,6 +1650,7 @@ function initTimeline() {
 
                 fishMixer.paused = true;
                 fishMixer.setTime(0);
+
 
                 //fishModel.rotation.x = radToDeg(90);
                 // init birdPos 2
@@ -1570,6 +1689,7 @@ function initTimeline() {
                     treeMixer.setTime(0);
                     treeModel.animations.forEach(animation => {
                         var action = treeMixer.clipAction(animation);
+                        action.reset();
                         action.loop = THREE.LoopOnce;
                         action.clampWhenFinished = true;
                         action.clamp
@@ -1588,19 +1708,33 @@ function initTimeline() {
                     x: birdFishPos[0] + .25, y: birdFishPos[1] - .05, z: birdFishPos[2] - .25,
                 }, `<`);
             }
+            //#endregion
         ),
         new timelineObj(
             'boy fades back in', 0,
             [boyModel, windWispModel],
+            //#region anims
+            // ready positions
+            function () {
+                //.position.set(0, 0, 0);
+
+                camera.position.set(8, 0, 0);
+                camera.lookAt(new THREE.Vector3(0, 0, 0));
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, .75);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
                 gsapT1_2.clear();
 
                 //init pos
                 gsapT1.to(camera.position, {
-                    duration: 2, ease: "power2.inOut", x: 0, y: 0, z: 1,
+                    duration: 2, ease: "power2.inOut", x: 0, y: .25, z: 1,
                     onUpdate: function () {
-                        camera.lookAt(new THREE.Vector3(0, 0, 0));
+                        camera.lookAt(new THREE.Vector3(0, .35, 0));
                     }
                 }, `<`);
 
@@ -1614,49 +1748,61 @@ function initTimeline() {
                     boyMixer.clipAction(boyAnimations[5]).play();
                 })
 
-                gsapT1.call(function () { fadeOverride = true; });
+                //gsapT1.call(function () { /* fadeOverride = true; */ });
             }
+            //#endregion
         ),
         new timelineObj(
             'camera stays on boy', 0,
             [boyModel, windWispModel],
+            //#region anims
+            // ready positions
+            function () {
+                boyModel.position.set(0, 0, 0);
+                switchGLTFAnims(boyModel, sitting_NLA);
+                boyMixer.clipAction(boyAnimations[5]).play();
+
+                camera.position.set(0, .25, 1);
+                camera.lookAt(new THREE.Vector3(0, .35, 0));
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, .75);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
-
-                //init pos
-                gsapT1.to(camera.position, {
-                    duration: 2, ease: "power2.inOut", x: 0, y: 0, z: 1,
-                    onUpdate: function () {
-                        camera.lookAt(new THREE.Vector3(0, 0, 0));
-                    }
-                }, `<`);
-
-
-                // set position of boy
-                // play hair animation
-                gsapT1.to(boyModel.position, {
-                    duration: .1, x: 0, y: 0, z: 0,
-                }, `<`).call(function () {
-                    switchGLTFAnims(boyModel, sitting_NLA);
-                    boyMixer.clipAction(boyAnimations[5]).play();
-                });
-                gsapT1.call(function () { fadeOverride = true; });
+                gsapT1_2.clear();
             }
+            //#endregion
         ),
         new timelineObj(
             'a sandstorm kicks up', 0,
             [boyModel, windWispModel],
+            //#region anims
+            // ready positions
+            function () {
+                boyModel.position.set(0, 0, 0);
+                switchGLTFAnims(boyModel, sitting_NLA);
+                boyMixer.clipAction(boyAnimations[5]).play();
+
+                camera.position.set(0, .25, 1);
+                camera.lookAt(new THREE.Vector3(0, .35, 0));
+
+                bloomPass.intensity = 2;
+                bloomPass.luminanceThreshold = .5;
+                bloomPass.blurPass.scale = 1;
+                bloomPass.blurPass.width = window.innerWidth;
+                bloomPass.blurPass.height = window.innerHeight;
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, .75);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
                 gsapT1_2.clear();
-
-                //init pos
-                gsapT1.to(camera.position, {
-                    duration: 2, ease: "power2.inOut", x: 0, y: 0, z: 1,
-                    onUpdate: function () {
-                        camera.lookAt(new THREE.Vector3(0, 0, 0));
-                    }
-                }, `<`).call(function () { fadeOverride = true });
 
                 //#region POINTS
                 let vertices = [];
@@ -1690,7 +1836,7 @@ function initTimeline() {
                 points.layers.set(activeSceneNum);
 
 
-                class particleSystem {
+                /* class particleSystem {
                     constructor(_geometry, _uniforms, _vertices) {
                         this._geometry = geometry;
                         this._vertices = vertices;
@@ -1714,12 +1860,12 @@ function initTimeline() {
                     updateParticles() {
 
                     }
-                }
+                } */
                 //#endregion
 
                 gsapT1.to(material, { duration: 1, opacity: 1 }, '<');
 
-                // move particles in random direction and update buffer??? see pevious versions
+                // to move particles, finish the particleSystem class
 
                 // generate 5000 particles every frame
                 gsapT1_2.to({}, {
@@ -1747,39 +1893,37 @@ function initTimeline() {
                     }
                 }, `<`);
             }
+            //#endregion
         ),
         new timelineObj(
             'zoom out, bloom intensifies', 0,
             [boyModel, windWispModel],
+            //#region anims
+            // ready positions
+            function () {
+                boyModel.position.set(0, 0, 0);
+                switchGLTFAnims(boyModel, sitting_NLA);
+                boyMixer.clipAction(boyAnimations[5]).play();
+
+                camera.position.set(0, .25, 1);
+                camera.lookAt(new THREE.Vector3(0, .35, 0));
+
+                bloomPass.intensity = 2;
+                bloomPass.luminanceThreshold = .5;
+                bloomPass.blurPass.scale = 1;
+                bloomPass.blurPass.width = window.innerWidth;
+                bloomPass.blurPass.height = window.innerHeight;
+
+            },
+            // play transition
+            function () {
+                fadeMats(mats, gltfModels, 1, .75);
+            },
+            // play actions
             function () {
                 gsapT1.clear();
 
-                // init pos
-                gsapT1.to(camera.position, {
-                    duration: .1, ease: "power2.inOut", x: 0, y: 0, z: 1,
-                    onUpdate: function () {
-                        camera.lookAt(new THREE.Vector3(0, 0, 0));
-                    }
-                }, `<`);
-
-                // init default blom settings
-                gsapT1.to(bloomPass, {
-                    duration: .1, ease: "power2.inOut", intensity: .5,
-                }, `<`);
-                gsapT1.to(bloomPass.blurPass, {
-                    duration: .1, ease: "power2.inOut", scale: 1, width: 1080, height: 1080,
-                }, `<`);
-
-                // set position of boy
-                // play hair animation
-                gsapT1.to(boyModel.position, {
-                    duration: .1, x: 0, y: 0, z: 0,
-                }, `<`).call(function () {
-                    switchGLTFAnims(boyModel, sitting_NLA);
-                    boyMixer.clipAction(boyAnimations[5]).play();
-                });
-
-                let fadeDur = 15
+                let fadeDur = 8;
                 gsapT1.to(camera.position, {
                     duration: fadeDur, ease: "power2.inOut", x: 0, y: 0, z: 1.5,
                     onUpdate: function () {
@@ -1817,13 +1961,8 @@ function initTimeline() {
                         };
                     })
                 )
-
-                const folder3 = gui.addFolder('bloom controls');
-                folder3.add(bloomPass.blurPass, "scale").min(0).max(50);
-                folder3.add(bloomPass.blurPass, "width").min(0).max(1080);
-                folder3.add(bloomPass.blurPass, "height").min(-25).max(1080);
-                folder3.add(bloomPass, 'intensity').min(-25).max(100);
             }
+            //#endregion
         ),
     );
     //#endregion
@@ -1915,43 +2054,60 @@ function goToScene(sceneNum) {
     swapNarration(allNarration[activeSceneNum].innerHTML);
     playScene(timelineClips[activeSceneNum], activeSceneNum)
 }
+let autoRot = false;
 
 function playScene(sceneObj, layerNum) {
+    autoRot = false;
     console.log(`%c active scene: ${layerNum} ${sceneObj.name}`, 'color: #1BA5D8');
 
     gsapT3.clear();
-    //gsapT1.progress(0);
     gsapT1.clear();
-
-    // fade out mats
-    if (!fadeOverride) { fadeMats(mats, gltfModels, 0, .5); }
-
-    // set initital ready positions
-    /* sceneObj.readyPositions(); */
-
-    // assign layers
-    gsapT3.call(function () { assignLayers(sceneObj, layerNum) });
+    rotObj.clear();
 
     // set repeat and play animations
     gsapT1.repeat(sceneObj.repeat);
 
+    // fade out mats
+    if (!fadeOverride) { fadeMats(mats, gltfModels, 0, .5); };
+
+    // ! set initital ready positions
+    gsapT3.call(function () {
+        sceneObj.readyPositions();
+
+        cameraInitial.x = camera.rotation.x;
+        cameraInitial.y = camera.rotation.y;
+        autoRot = true;
+        //console.log(`READY POSITIONS`);
+    });
+
+    // assign layers
+    gsapT3.call(function () {
+        assignLayers(sceneObj, layerNum);
+        //console.log(`ASSIGN LAYERS`);
+    });
+
     // reset fade override and play the scene
     gsapT3.call(function () {
         fadeOverride = false;
+
+        // fade in mats —— add to new playTransition() function?
+        //fadeMats(mats, gltfModels, 1, .75);
+
+        // !
+        sceneObj.playTransition();
+        //console.log(`PLAY TRANSITION`);
         sceneObj.playActions();
+        //console.log(`PLAY ACTIONS`);
     });
 
     // queue the cursor fade to t2 after t1 has completed
     /* gsapT1.call(function () { */
+    // ! add to separate function
     gsapT2.call(function () {
         cursor.style.display = 'block'
         //console.log(`%c cursor to block`, `#fefefe`);
-    })
+    });
     /* }); */
-
-    // TODO: assign mats via initial parameters, rather than uniform values
-    // fade in mats
-    fadeMats(mats, gltfModels, 1, .75);
 }
 
 function initLayers() {
@@ -1983,22 +2139,26 @@ function assignLayers(sceneObj, layerNum) {
 
 function fadeMats(materials, models, opacity, duration) {
     console.log(`%c fade mats, o: ${opacity}, d: ${duration}`, `color: #B5B5B5`);
-    if (Array.isArray(materials)) {
-        materials.forEach(mat => {
-            gsapT3.to(mat, { duration: duration, opacity: opacity }, '<');
-        });
-    } else {
-        gsapT3.to(materials, { duration: duration, opacity: opacity }, '<');
+    if (materials) {
+        if (Array.isArray(materials)) {
+            materials.forEach(mat => {
+                gsapT3.to(mat, { duration: duration, opacity: opacity }, '<');
+            });
+        } else {
+            gsapT3.to(materials, { duration: duration, opacity: opacity }, '<');
+        }
     }
 
-    models.forEach(model => {
-        model.traverse(child => {
-            if (child.material) {
-                child.material.transparent = true;
-                gsapT3.to(child.material, { duration: duration, opacity: opacity }, '<');
-            };
+    if (models) {
+        models.forEach(model => {
+            model.traverse(child => {
+                if (child.material) {
+                    child.material.transparent = true;
+                    gsapT3.to(child.material, { duration: duration, opacity: opacity }, '<');
+                };
+            });
         });
-    });
+    }
 }
 
 //#endregion
@@ -2069,9 +2229,37 @@ function spliceString(str, substr) {
 /**
  * Animate
  */
+/* const mouseObj = new THREE.Vector2();
+const targetMod = new THREE.Vector2();
+const cameraInitial = new THREE.Vector2();
 
-const windowHalfX = window.innerWidth / 2;
-const windowHalfY = window.innerHeight / 2;
+document.addEventListener('mousemove', onMouseMove, false);
+
+function onMouseMove(event) {
+    // get quadrant coordinates of mouse
+    mouseObj.x = (event.clientX - (window.innerWidth / 2));
+    mouseObj.y = (event.clientY - (window.innerHeight / 2));
+
+    targetMod.x = (1 - mouseObj.x) * 0.0001;
+    targetMod.y = (1 - mouseObj.y) * 0.0001;
+
+    console.log(`       `)
+    console.log(mouseObj);
+    console.log(`target: ${round(targetMod.x)}, ${round(targetMod.y)}`)
+    console.log(`cam: ${round(camera.rotation.y)}, ${round(camera.rotation.x)}, ${round(camera.rotation.z)}`)
+
+    //move mouse
+    if (autoRot) {
+        //camera.rotation.x = (targetMod.y) + cameraInitial.x;
+        camera.rotation.y = (targetMod.x) + cameraInitial.y;
+    }
+} */
+
+function round(num) {
+    var m = Number((Math.abs(num) * 100).toPrecision(15));
+    return Math.round(m) / 100 * Math.sign(num);
+}
+
 const tick = () => {
 
     //#region BASIC
@@ -2111,20 +2299,6 @@ const tick = () => {
     }
 
     //#endregion
-
-    // rotate camera with mouse loc
-
-
-    //follow mouse
-    /* targetX = mouseX * .001;
-    targetY = mouseY * .001;
-
-    camera.rotation.y += 0.05 * (targetX - camera.rotation.y);
-    camera.rotation.x += 0.05 * (targetY - camera.rotation.x);
-
-    console.log(camera.rotation); */
-
-
 
 
     // Update stats
