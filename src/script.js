@@ -818,6 +818,10 @@ function initScene() {
     folder2.add(camera.position, "y").min(-10).max(10);
     folder2.add(camera.position, "z").min(-10).max(10);
 
+    /* folder2.add(camera.rotation, "x").min(degToRad(-1)).max(degToRad(1));
+    folder2.add(camera.rotation, "y").min(degToRad(-1)).max(degToRad(1));
+    folder2.add(camera.rotation, "z").min(degToRad(-1)).max(degToRad(1)); */
+
     // Controls
     controls = new OrbitControls(camera, canvas)
     controls.enableDamping = true;
@@ -2054,9 +2058,12 @@ function goToScene(sceneNum) {
     swapNarration(allNarration[activeSceneNum].innerHTML);
     playScene(timelineClips[activeSceneNum], activeSceneNum)
 }
+
+// !
 let autoRot = false;
 
 function playScene(sceneObj, layerNum) {
+    // !
     autoRot = false;
     console.log(`%c active scene: ${layerNum} ${sceneObj.name}`, 'color: #1BA5D8');
 
@@ -2068,14 +2075,18 @@ function playScene(sceneObj, layerNum) {
     gsapT1.repeat(sceneObj.repeat);
 
     // fade out mats
-    if (!fadeOverride) { fadeMats(mats, gltfModels, 0, .5); };
+    if (!fadeOverride) { fadeMats(mats, gltfModels, 0, .75); };
 
-    // ! set initital ready positions
     gsapT3.call(function () {
         sceneObj.readyPositions();
 
-        cameraInitial.x = camera.rotation.x;
-        cameraInitial.y = camera.rotation.y;
+        // !
+        /* cameraInitial.x = camera.rotation.x;
+        cameraInitial.y = camera.rotation.y; */
+        cameraInitial.x = camera.position.x;
+        cameraInitial.y = camera.position.y;
+
+        // !
         autoRot = true;
         //console.log(`READY POSITIONS`);
     });
@@ -2093,7 +2104,6 @@ function playScene(sceneObj, layerNum) {
         // fade in mats —— add to new playTransition() function?
         //fadeMats(mats, gltfModels, 1, .75);
 
-        // !
         sceneObj.playTransition();
         //console.log(`PLAY TRANSITION`);
         sceneObj.playActions();
@@ -2229,31 +2239,125 @@ function spliceString(str, substr) {
 /**
  * Animate
  */
-const mouseObj = new THREE.Vector2();
+const mouseObj = new THREE.Vector2(0, 0);
+mouseObj.directionX = 0;
+mouseObj.directionY = 0;
 const targetMod = new THREE.Vector2();
-const cameraInitial = new THREE.Vector2();
-/* 
+//const cameraInitial = new THREE.Vector2();
+const cameraInitial = new THREE.Vector3();
+let timeDirStartX, timeDirDeltaX;
+let timeDirStartY, timeDirDeltaY;
+let vModX = 0;
+let vModY = 0;
+
 document.addEventListener('mousemove', onMouseMove, false);
 
 function onMouseMove(event) {
-    // get quadrant coordinates of mouse
-    mouseObj.x = (event.clientX - (window.innerWidth / 2));
-    mouseObj.y = (event.clientY - (window.innerHeight / 2));
 
-    targetMod.x = (1 - mouseObj.x) * 0.0001;
-    targetMod.y = (1 - mouseObj.y) * 0.0001;
+    //#region Mouse X
+    // -1 = left, 1 = right
+    mouseObj.oldX = mouseObj.directionX;
 
-    console.log(`       `)
+    let oldLocX = mouseObj.x;
+    let newLocX = (event.clientX/*  - (window.innerWidth / 2) */);
+    mouseObj.directionX = (oldLocX > newLocX) ? -1 : (oldLocX < newLocX) ? 1 : 0;
+    //console.log(mouseObj.directionX);
+
+    // determine the time delta since the last mouse direction change
+    if (mouseObj.oldX != mouseObj.directionX) {
+        timeDirStartX = clock.elapsedTime;
+        vModX = 0;
+        console.log(`reset vMod`)
+    }
+
+    timeDirDeltaX = clock.elapsedTime - timeDirStartX;
+    // delta 0 - .25 | vMod 0 - 1
+    if (timeDirDeltaX < .25) {
+        vModX = timeDirDeltaX * 4;
+    } else {
+        vModX = 1;
+    }
+    console.log(`delta: ${timeDirDeltaX}`);
+    console.log(`vmod: ${vModX}`);
+
+    // get new quadrant coordinates of mouse
+    mouseObj.x = (event.clientX/*  - (window.innerWidth / 2) */);
+
+    /* targetMod.x = (1 - mouseObj.x) * 0.0001; */
+
+    //console.log(`       `)
     console.log(mouseObj);
-    console.log(`target: ${round(targetMod.x)}, ${round(targetMod.y)}`)
-    console.log(`cam: ${round(camera.rotation.y)}, ${round(camera.rotation.x)}, ${round(camera.rotation.z)}`)
+    //console.log(`target: ${round(targetMod.x)}, ${round(targetMod.y)}`)
+    //console.log(`cam: ${round(camera.rotation.y)}, ${round(camera.rotation.x)}, ${round(camera.rotation.z)}`)
 
     //move mouse
     if (autoRot) {
+        //camera.eulerOrder = 'YXZ';
         //camera.rotation.x = (targetMod.y) + cameraInitial.x;
-        camera.rotation.y = (targetMod.x) + cameraInitial.y;
+        //camera.rotation.y = (targetMod.x) + cameraInitial.y;
+
+        //camera.rotateY((targetMod.x) + cameraInitial.y);
+        //camera.rotation.set(new THREE.Euler(0, 1, 1.57, 'XYZ');)
+
+        // map range 0-1-0 = sin ( mouseX / (max/π))
+        //let factor = 0.01 * (Math.sin(mouseObj.x / ((window.innerWidth / 2) / Math.PI)));
+        let factor = mouseObj.directionX * Math.abs(
+            0.005 * (Math.sin(mouseObj.x / ((window.innerWidth) / Math.PI))));
+        camera.translateX(factor * vModX);
+        //camera.translateX(factor);
+
+        console.log(factor);
     }
-} */
+    //#endregion
+
+    //#region Mouse Y
+    // -1 = left, 1 = right
+    mouseObj.oldY = mouseObj.directionY;
+
+    let oldLocY = mouseObj.y;
+    let newLocY = (event.clientY/*  - (window.innerHeight / 2) */);
+    mouseObj.directionY = (oldLocY > newLocY) ? 1 : (oldLocY < newLocY) ? -1 : 0;
+    //console.log(mouseObj.directionY);
+
+    // determine the time delta since the last mouse direction change
+    if (mouseObj.oldY != mouseObj.directionY) {
+        timeDirStartY = clock.elapsedTime;
+        vModY = 0;
+        console.log(`reset vMod`)
+    }
+
+    timeDirDeltaY = clock.elapsedTime - timeDirStartY;
+    // delta 0 - .25 | vMod 0 - 1
+    if (timeDirDeltaY < .25) {
+        vModY = timeDirDeltaY * 4;
+    } else {
+        vModY = 1;
+    }
+    console.log(`delta: ${timeDirDeltaY}`);
+    console.log(`vmod: ${vModY}`);
+
+    // get new quadrant coordinates of mouse
+    mouseObj.y = (event.clientY/*  - (window.innerHeight / 2) */);
+
+    targetMod.y = (1 - mouseObj.y) * 0.0001;
+
+    //console.log(`       `)
+    console.log(mouseObj);
+    //console.log(`target: ${round(targetMod.Y)}, ${round(targetMod.y)}`)
+    //console.log(`cam: ${round(camera.rotation.y)}, ${round(camera.rotation.Y)}, ${round(camera.rotation.z)}`)
+
+    //move mouse
+    if (autoRot) {
+        let factor = mouseObj.directionY * Math.abs(
+            0.0035 * (Math.sin(mouseObj.y / ((window.innerHeight) / Math.PI))));
+        camera.translateY(factor * vModY);
+        //camera.translateY(factor);
+
+        console.log(factor);
+    }
+    //#endregion
+
+}
 
 function round(num) {
     var m = Number((Math.abs(num) * 100).toPrecision(15));
