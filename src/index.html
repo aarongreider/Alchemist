@@ -30,7 +30,7 @@
     </div>
 
     <div id="splash">
-        <video playsinline autoplay muted loop>
+        <video id="starsVideo" playsinline autoplay muted loop>
             <source src="/Users/aarongreider/Desktop/CODE/Alchemist/src/starmap.mp4" type="video/mp4">
         </video>
 
@@ -42,7 +42,10 @@
                 world
                 with the new.
             </p>
-            <button>BEGIN</button>
+            <p><br>
+                <span id="loadingNum">0</span>% / 100%
+            </p>
+            <button class="deactivated">BEGIN</button>
         </div>
     </div>
 
