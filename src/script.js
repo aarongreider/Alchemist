@@ -8,7 +8,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { AnimationMixer, BlendingSrcFactor, DstAlphaFactor, MathUtils, Object3D, OneFactor, PCFShadowMap, SkeletonHelper, SrcAlphaFactor, SubtractEquation, Vector3 } from 'three'
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { SelectiveBloomEffect, BloomEffect, EffectComposer, EffectPass, RenderPass } from "postprocessing";
+import { DepthOfFieldEffect, SelectiveBloomEffect, BloomEffect, EffectComposer, EffectPass, RenderPass } from "postprocessing";
 import { Water } from 'three/examples/jsm/objects/water2.js';
 //import { Water } from 'three/examples/jsm/objects/Water.js';
 import { Refractor } from 'three/examples/jsm/objects/Refractor.js';
@@ -47,6 +47,9 @@ const canvas = document.querySelector('canvas.webgl');
 
 // Scene
 const scene = new THREE.Scene();
+let sceneBG = txtLoader.load("textures/sceneBG.jpg");
+sceneBG.mapping = THREE.EquirectangularReflectionMapping;
+scene.background = sceneBG;
 
 // Uniforms
 let uniforms = {
@@ -132,7 +135,7 @@ part3Button.addEventListener("click", function () {
 // init objects
 //const bloomLayer = new THREE.Layers();
 
-let effectComposer, renderPass, bloomPass;
+let effectComposer, renderPass, bloomPass, DOFPass;
 let axesHelper;
 
 let boyAnimParams;
@@ -142,10 +145,10 @@ let mixers = [];
 
 let windVideo;
 let boxMesh, sphereMesh, pointsMesh, water;
-let boyMixer, girlMixer, heartMixer, birdMixer, bird2Mixer, fishMixer, treeMixer;
-let boyAnimations, girlAnimations, heartAnimations, birdAnimations, bird2Animations, fishAnimations;
-let boySkeleton, birdSkeleton, boyModel, girlModel, duneModel, sandWispModel, windWispModel;
-let flowerModel, heartModel, heartPointsModel, birdModel, bird2Model, fishModel, treeModel;
+let boyMixer, girlMixer, heartMixer, birdMixer, bird2Mixer, bird3Mixer, fishMixer, treeMixer;
+let boyAnimations, girlAnimations, heartAnimations, birdAnimations, bird2Animations, bird3Animations, fishAnimations;
+let boySkeleton, birdSkeleton, boyModel, girlModel, domeModel, sandWispModel, windWispModel;
+let flowerModel, heartModel, heartPointsModel, birdModel, bird2Model, bird3Model, fishModel, treeModel;
 let pole_walking_NLA, sitting_NLA, start_walking_NLA, movePos1_NLA, walk_cycle_NLA;
 let blow_kiss_NLA, spin_NLA;
 
@@ -241,6 +244,7 @@ function initObjects() {
     rockMat.name = `rock diffuse mat`;
     mats.push(rockMat);
 
+    // ! fix depthtest and render order of snad wisp and dome
     const sandWispMat = new THREE.MeshBasicMaterial({
         map: wispTxt,
         //color: 0xffffff,
@@ -261,15 +265,13 @@ function initObjects() {
     windMat.name = `wind video mat`
     mats.push(windMat);
 
-    /*     const treeMat = new THREE.MeshBasicMaterial({
-            map: txtLoader.load(`tree/m_tree_baseColor.png`),
-            //color: 0xffffff,
-            side: THREE.DoubleSide,
-            //alphaMap: txtLoader.load(`tree/m_leaves_alpha.png`),
-            transparent: true,
-        })
-        treeMat.name = `tree trunk mat`;
-        mats.push(treeMat); */
+    /* const domeMat = new THREE.MeshBasicMaterial({
+        //transparent: true,
+        map: txtLoader.load("textures/dome_1.jpg"),
+        side: THREE.BackSide,
+    });
+    domeMat.name = `dome mat`
+    mats.push(domeMat); */
 
     const treeLeavesMat = new THREE.MeshStandardMaterial({
         color: 0xc09253,
@@ -287,25 +289,26 @@ function initObjects() {
     flowerMat.name = `flower mat`;
     mats.push(flowerMat);
 
-    const pointsMat = new THREE.PointsMaterial({
+    /* const pointsMat = new THREE.PointsMaterial({
         transparent: true,
         size: .0005,
-    })
+    }) */
 
-    const pointsWindMat = new THREE.PointsMaterial({
+    /* const pointsWindMat = new THREE.PointsMaterial({
         transparent: true,
         //map: windTxt,
         //color: 0xc09253,
         side: THREE.DoubleSide,
         //alphaMap: windTxt,
         size: .05,
-    });
+    }); */
 
     const glowMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         //emissive: 0xffffff,
         //emissiveIntensity: 10,
         transparent: true,
+        skinning: true,
     });
     glowMat.name = `glow mat`;
     mats.push(glowMat);
@@ -357,12 +360,37 @@ function initObjects() {
     boxMesh.position.set(-1, 1, -1);
     scene.add(boxMesh);
 
-    pointsMesh = new THREE.Points(pointsGeo, pointsMat);
-    scene.add(pointsMesh);
+    /* pointsMesh = new THREE.Points(pointsGeo, pointsMat);
+    scene.add(pointsMesh); */
 
     //#endregion
 
     //#region GLTF
+
+    /* gltfLoader.load(`dome_v1.glb`, (gltf) => {
+        domeModel = gltf.scene;
+
+        //set transforms
+        let scale = 60;
+        domeModel.scale.set(scale, scale, scale);
+        domeModel.position.set(5, scale / 3.5, 5);
+
+        //console.log(wispModel)
+
+        // assign material and shadow
+        domeModel.traverse(function (child) {
+            if (child.isMesh) {
+                //object.receiveShadow = true;
+                child.material = domeMat;
+            }
+        });
+
+
+        // add model to scene
+        gltfModels.push(domeModel);
+        //scene.add(domeModel);
+    }); */
+
 
     /**
      * LOAD WISPS GLTF 
@@ -500,7 +528,7 @@ function initObjects() {
         //gltfModels.push(treeModel);
         gltfModels.push(treeModel);
         scene.add(treeModel);
-        console.log(treeModel)
+        //console.log(treeModel)
 
         // init animation mixer
         treeMixer = new THREE.AnimationMixer(treeModel);
@@ -576,6 +604,33 @@ function initObjects() {
         //console.log(fbx.animations);
 
         //switchGLTFAnims(bird2Model, bird2Mixer.clipAction(fbx.animations[0]))
+    });
+
+    gltfLoader.load(`birdie_8.glb`, function (gltf) {
+        bird3Model = gltf.scene;
+        bird3Model.name = `bird3 GLTF`;
+
+        //set transforms
+        bird3Model.scale.set(.01, .01, .01);
+
+        // assign material and shadow
+        bird3Model.traverse(function (child) {
+            if (child.isMesh) {
+                child.material = glowMat;
+            }
+        });
+
+        // add model to scene
+        gltfModels.push(bird3Model);
+        scene.add(bird3Model);
+
+        // init animation mixer
+        bird3Mixer = new THREE.AnimationMixer(bird3Model);
+        bird3Animations = gltf.animations;
+        mixers.push(bird3Mixer);
+
+        bird3Model.activeClip = bird3Mixer.clipAction(gltf.animations[0]);
+        bird3Model.activeClip.play();
     });
 
     gltfLoader.load(`fibshOver_v2.glb`, function (glb) {
@@ -773,7 +828,7 @@ function initScene() {
     }
 
     axesHelper = new THREE.AxesHelper(5);
-    scene.add(axesHelper);
+    //scene.add(axesHelper);
 
     window.addEventListener('resize', () => {
         // Update sizes
@@ -850,15 +905,23 @@ function initScene() {
         intensity: 2,
         luminanceThreshold: .5
     })
+    let dofFocus = new THREE.Vector2(.15, .025);
+    DOFPass = new DepthOfFieldEffect(camera, {
+        focusDistance: 0.15,
+        focalLength: 0.025,
+        bokehScale: 4.0,
+        //height: 480,
+        //target: dofTarget,
+    })
     const effectPass = new EffectPass(
         camera,
-        bloomPass
+        bloomPass,
+        DOFPass,
     );
 
     effectComposer.addPass(renderPass);
     //effectComposer.addPass(bloomPass);
     effectComposer.addPass(effectPass);
-
 
     //#endregion
 
@@ -868,8 +931,49 @@ function initScene() {
     folder3.add(bloomPass.blurPass, "width").min(0).max(1080);
     folder3.add(bloomPass.blurPass, "height").min(-25).max(1080);
     folder3.add(bloomPass, 'intensity').min(-25).max(100);
+
+    const folder4 = gui.addFolder('DOF controls');
+    folder4.add(DOFPass, "bokehScale").min(0).max(8);
+    folder4.add(dofFocus, "x", 0.0, 1.0, 0.001).onChange((value) => {
+        DOFPass.circleOfConfusionMaterial.uniforms.focusDistance.value = value;
+    });
+    folder4.add(dofFocus, "y", 0.0, 1.0, 0.001).onChange((value) => {
+        DOFPass.circleOfConfusionMaterial.uniforms.focalLength.value = value;
+    });
+
+    setDOFDistance(new THREE.Vector3(0, 0, 0), .25);
+
+    /* folder4.add(dofTarget, "x").min(-10).max(10).onChange(function () {
+        DOFPass.setTarget(dofTarget);
+    });
+    folder4.add(dofTarget, "y").min(-10).max(10);
+    folder4.add(dofTarget, "z").min(-10).max(10); */
 }
 
+function setDOFDistance(vec3, dur) {
+    let dist = DOFPass.calculateFocusDistance(vec3);
+    //console.log(dist);
+
+    let cocFocDist = DOFPass.circleOfConfusionMaterial.uniforms.focusDistance;
+    if (dur == 0) {
+        DOFPass.circleOfConfusionMaterial.uniforms.focusDistance.value = dist;
+    } else {
+        gsap.to(cocFocDist, { duration: dur, value: dist });
+    }
+}
+
+function initRenderOrder() {
+    /* domeModel.traverse(child => {
+        if (child.material) {
+            child.material.depthTest = false;
+            child.material.depthWrite = false;
+            
+        }
+    });
+    domeModel.renderOrder = 0; */
+    //sandWispModel.renderOrder = 1;
+
+}
 /**
  * INIT TIMELINE
  */
@@ -889,10 +993,13 @@ function initTimeline() {
                 boyModel.position.set(0, 0, 0);
                 sandWispModel.position.set(-1, 0, -1);
 
+                //camera.add(domeModel);
+
                 switchGLTFAnims(boyModel, sitting_NLA);
 
                 //gsapT1.to(camera.position, { duration: .1, z: -1.75, y: .35, x: -.75 });
                 camera.position.set(-.75, .35, -1.75);
+                setDOFDistance(new THREE.Vector3(0, 0, 0), .25);
 
                 let pos;
                 flowerModel.traverse(function (child) {
@@ -920,7 +1027,18 @@ function initTimeline() {
 
                 //to camera pos
                 gsapT1.to(camera.position, { duration: 10, ease: "power2.inOut", z: 21.75 },);
-                gsapT1.to(camera.position, { duration: 10, ease: "power2.inOut", x: -1.15 }, `<`);
+                gsapT1.to(camera.position, {
+                    duration: 10, ease: "power2.inOut", x: -1.15, onComplete: function () {
+                        flowerModel.traverse(function (child) {
+                            if (child.name.includes("flower")) {
+                                let pos = child.position;
+                                DOFPass.circleOfConfusionMaterial.uniforms.focusDistance.value = .004;
+                            }
+                        })
+                    }
+                }, `<`)
+
+
 
 
                 // false = fade out | true = custom transition handler
@@ -943,6 +1061,7 @@ function initTimeline() {
 
 
                 camera.position.set(-.25, .7, 2);
+                setDOFDistance(new THREE.Vector3(0, 0, 0), .25);
                 //camera.lookAt(new THREE.Vector3(20, 20, 20));
             },
             // play transition
@@ -979,18 +1098,21 @@ function initTimeline() {
             //#endregion
         ),
         new timelineObj(
-            'fade girl and blow kiss', 0,
-            [boyModel, girlModel, axesHelper],
+            'fade girl and blow kiss', -1,
+            [boyModel, girlModel, heartModel],
             //#region anims
             // ready positions
             function () {
                 boyModel.position.set(0, 0, 0);
                 girlModel.position.set(-.6, 0, 2);
+                heartModel.position.set(-.6, .5, 1.85);
+                heartModel.scale.set(.1, .1, .1),
 
-                switchGLTFAnims(boyModel, sitting_NLA);
+                    switchGLTFAnims(boyModel, sitting_NLA);
 
                 camera.position.set(-2, .25, .6);
                 camera.lookAt(new THREE.Vector3(0, .5, 1));
+                setDOFDistance(new THREE.Vector3(0, 0, 0), .25);
 
                 // fade out girl
                 girlModel.traverse(child => {
@@ -1003,21 +1125,35 @@ function initTimeline() {
             },
             // play transition
             function () {
-                fadeMats(mats, [boyModel, axesHelper], 1, 1);
+                fadeMats(mats, [boyModel], 1, 1);
             },
             function () {
                 gsapT1.clear();
 
-                gsapT1.to({}, { duration: 3 }); //filler
-                gsapT1.to({}, { duration: 1 }); //filler
-
+                gsapT1.addLabel(`girlFadeIn`, `0`)
+                gsapT1.addLabel(`heartFadeOut`, `+=6`)
                 // fade girl in
                 girlModel.traverse(child => {
                     if (child.material) {
                         child.material.transparent = true;
-                        gsapT1.to(child.material, { duration: 3.5, opacity: 1 }, '<');
+                        gsapT1.to(child.material, { duration: 3.5, opacity: .75 }, 'girlFadeIn');
                     };
                     //console.log(`%c FADE OUT GIRL SCENE 3`, 'color: #00FFE3')
+                });
+
+                gsapT1.to(heartModel.position, { duration: 6, y: .25, z: .25 }, 'girlFadeIn');
+                // fade heart in
+                heartModel.traverse(child => {
+                    if (child.material) {
+                        child.material.transparent = true;
+                        gsapT1.to(child.material, { duration: .5, opacity: 1 }, 'girlFadeIn');
+                    };
+                });
+                heartModel.traverse(child => {
+                    if (child.material) {
+                        child.material.transparent = true;
+                        gsapT1.to(child.material, { duration: .25, opacity: 0 }, 'heartFadeOut');
+                    };
                 });
             }
             //#endregion
@@ -1033,8 +1169,10 @@ function initTimeline() {
 
                 switchGLTFAnims(boyModel, sitting_NLA);
 
-                camera.position.set(-2.25, 0, .5);
+                //camera.position.set(-2.25, 0, .5);
+                camera.position.set(-1.25, .5, 2.25);
                 camera.lookAt(new THREE.Vector3(0, .5, .5));
+                setDOFDistance(new THREE.Vector3(0, 0, 0), .25);
             },
             // play transition
             function () {
@@ -1057,6 +1195,7 @@ function initTimeline() {
 
                 camera.position.set(0, .55, -2);
                 camera.lookAt(new THREE.Vector3(0, .5, 0));
+                setDOFDistance(new THREE.Vector3(0, 0, 0), .25);
             },
             // play transition
             function () {
@@ -1073,17 +1212,19 @@ function initTimeline() {
         ),
         new timelineObj(
             'bird glides in', 0,
-            [birdModel],
+            [bird3Model],
             //#region anims
             // ready positions
             function () {
-                birdModel.position.set(0, 0, 0);
-                birdModel.rotation.set(0, 0, 0);
+                bird3Model.position.set(0, 0, 0);
+                bird3Model.rotation.set(0, 0, 0);
 
-                switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[2]))
+                //switchGLTFAnims(bird3Model, bird3Mixer.clipAction(bird3Animations[0]))
+                bird3Mixer.setTime(0);
 
-                camera.position.set(.25, .25, -1);
+                camera.position.set(.25, .25, 1);
                 camera.lookAt(new THREE.Vector3(0, 0, 0));
+                setDOFDistance(new THREE.Vector3(0, 0, 0), .25);
             },
             // play transition
             function () {
@@ -1094,19 +1235,15 @@ function initTimeline() {
                 gsapT1.clear();
                 gsapT1_2.clear();
 
-                //#region bird flap
-                gsapT1_2.call(function () {
-                    switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[2]))
-                })
-
-                gsapT1_2.to({}, { duration: 5 }).call(function () {
-                    switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
-                })
-
-                gsapT1_2.to({}, { duration: 3, }).call(function () {
-                    switchGLTFAnims(birdModel, birdMixer.clipAction(birdAnimations[3]))
-                })
-                //#endregion
+                gsapT1.call(function () {
+                    bird3Mixer.setTime(0);
+                    var action = bird3Mixer.clipAction(bird3Animations[0]);
+                    action.reset();
+                    action.loop = THREE.LoopOnce;
+                    action.clampWhenFinished = true;
+                    action.clamp
+                    action.play();
+                });
 
                 // false = fade out | true = custom transition handler
                 //gsapT1.call(function () { fadeOverride = true });
@@ -1137,6 +1274,7 @@ function initTimeline() {
 
                 camera.position.set(.25, .25, -1);
                 camera.lookAt(new THREE.Vector3(0, 0, 0));
+                setDOFDistance(new THREE.Vector3(0, 0, 0), .25);
             },
             // play transition
             function () {
@@ -1192,6 +1330,7 @@ function initTimeline() {
 
                 camera.position.set(.25, .25, -1);
                 camera.lookAt(new THREE.Vector3(0, 0, 0));
+                setDOFDistance(new THREE.Vector3(0, 0, 0), .25);
             },
             // play transition
             function () {
@@ -1242,7 +1381,7 @@ function initTimeline() {
                         new THREE.Float32BufferAttribute(vertices, 3)), material);
 
                 scene.add(points);
-                points.layers.set(activeSceneNum);
+                points.layers.set(0);
 
                 /* class particleSystem {
                                 constructor(_geometry, _uniforms, _vertices) {
@@ -1307,7 +1446,7 @@ function initTimeline() {
                                 new THREE.Float32BufferAttribute(vertices, 3)), material);
 
                         scene.add(points);
-                        points.layers.set(activeSceneNum);
+                        points.layers.set(0);
                         //console.log(this.progress());
                     }
                 }, 0);
@@ -1327,6 +1466,7 @@ function initTimeline() {
                 camera.lookAt(new THREE.Vector3(0, 0, 0));
 
                 birdModel.rotation.set(0, 0, 0);
+                setDOFDistance(new THREE.Vector3(0, 0, 0), .25);
             },
             // play transition
             function () {
@@ -1411,6 +1551,8 @@ function initTimeline() {
                         console.log(child.material.opacity);
                     };
                 });
+
+                setDOFDistance(new THREE.Vector3(0, 0, 0), .25);
             },
             // play transition
             function () {
@@ -1464,7 +1606,7 @@ function initTimeline() {
                 //#endregion
 
                 //T1 to animate scale of water
-                let valFrom = 0;
+                /* let valFrom = 0;
                 let valTo = .75;
                 gsapT1.call(function () {
                     gsapT3.clear();
@@ -1477,7 +1619,7 @@ function initTimeline() {
                             console.log(`completed water scale`)
                         },
                     })
-                });
+                }); */
 
                 //#region start/stop fish anim
                 let fishAnimLength = fishModel.activeClip._clip.duration;
@@ -1556,6 +1698,7 @@ function initTimeline() {
 
                 bird2Model.position.set(birdFishPos[0], birdFishPos[1], birdFishPos[2]);
                 fishModel.position.set(birdFishPos[0] + .25, birdFishPos[1] - .05, birdFishPos[2] - .25)
+                setDOFDistance(new THREE.Vector3(0, 1.75, 2), 1);
             },
             // play transition
             function () {
@@ -1631,6 +1774,7 @@ function initTimeline() {
             function () {
                 camera.position.set(1, 2, -1.5);
                 camera.lookAt(new THREE.Vector3(0, .25, 0));
+                setDOFDistance(new THREE.Vector3(0, .25, 0), 0)
 
                 treeMixer.setTime(0);
             },
@@ -1646,9 +1790,10 @@ function initTimeline() {
 
                 //init pos
                 gsapT1.to(camera.position, {
-                    duration: 2, ease: "power2.inOut", x: 8, y: 0, z: 0,
+                    duration: 2, ease: "power2.inOut", x: 7, y: 0, z: 0,
                     onUpdate: function () {
                         camera.lookAt(new THREE.Vector3(0, 0, 0));
+                        setDOFDistance(new THREE.Vector3(0, 0, 0), 0);
                     }
                 }, `<`);
 
@@ -1658,7 +1803,7 @@ function initTimeline() {
 
                 //fishModel.rotation.x = radToDeg(90);
                 // init birdPos 2
-                let birdFishPos = [0, .5, -8];
+                let birdFishPos = [0, .5, -13];
                 let birdFishDur = .1;
                 gsapT1.to(bird2Model.position, {
                     duration: birdFishDur, ease: `power1.out`,
@@ -1701,7 +1846,7 @@ function initTimeline() {
                     });
                 });
 
-                birdFishPos = [0, .5, 11];
+                birdFishPos = [0, .5, 15];
                 birdFishDur = 10;
                 gsapT1.to(bird2Model.position, {
                     duration: birdFishDur, ease: `none`,
@@ -1724,6 +1869,7 @@ function initTimeline() {
 
                 camera.position.set(8, 0, 0);
                 camera.lookAt(new THREE.Vector3(0, 0, 0));
+                setDOFDistance(new THREE.Vector3(0, 0, 0), 0)
             },
             // play transition
             function () {
@@ -1739,6 +1885,7 @@ function initTimeline() {
                     duration: 2, ease: "power2.inOut", x: 0, y: .25, z: 1,
                     onUpdate: function () {
                         camera.lookAt(new THREE.Vector3(0, .35, 0));
+                        setDOFDistance(new THREE.Vector3(0, .35, 0), 0);
                     }
                 }, `<`);
 
@@ -1768,6 +1915,7 @@ function initTimeline() {
 
                 camera.position.set(0, .25, 1);
                 camera.lookAt(new THREE.Vector3(0, .35, 0));
+                setDOFDistance(new THREE.Vector3(0, .25, 0), 0)
             },
             // play transition
             function () {
@@ -1837,7 +1985,7 @@ function initTimeline() {
                         new THREE.Float32BufferAttribute(vertices, 3)), material);
 
                 scene.add(points);
-                points.layers.set(activeSceneNum);
+                points.layers.set(0);
 
 
                 /* class particleSystem {
@@ -1892,7 +2040,7 @@ function initTimeline() {
                                 new THREE.Float32BufferAttribute(vertices, 3)), material);
 
                         scene.add(points);
-                        points.layers.set(activeSceneNum);
+                        points.layers.set(0);
                         //console.log(this.progress());
                     }
                 }, `<`);
@@ -2063,6 +2211,10 @@ function goToScene(sceneNum) {
 let autoRot = false;
 
 function playScene(sceneObj, layerNum) {
+
+    //console.log(DOFPass);
+    //console.log(DOFPass.getTarget());
+
     // !
     autoRot = false;
     console.log(`%c active scene: ${layerNum} ${sceneObj.name}`, 'color: #1BA5D8');
@@ -2130,6 +2282,7 @@ function initLayers() {
 
 function assignLayers(sceneObj, layerNum) {
     // disable all actors from all layers
+    layerNum = 0;
     scene.traverse(child => {
         if (child instanceof THREE.Mesh) {
             child.layers.disableAll();
@@ -2236,9 +2389,7 @@ function spliceString(str, substr) {
 //#endregion
 
 
-/**
- * Animate
- */
+//#region MOUSE
 const mouseObj = new THREE.Vector2(0, 0);
 mouseObj.directionX = 0;
 mouseObj.directionY = 0;
@@ -2277,8 +2428,8 @@ function onMouseMove(event) {
     } else {
         vModX = 1;
     }
-    console.log(`delta: ${timeDirDeltaX}`);
-    console.log(`vmod: ${vModX}`);
+    //console.log(`delta: ${timeDirDeltaX}`);
+    //console.log(`vmod: ${vModX}`);
 
     // get new quadrant coordinates of mouse
     mouseObj.x = (event.clientX/*  - (window.innerWidth / 2) */);
@@ -2286,7 +2437,7 @@ function onMouseMove(event) {
     /* targetMod.x = (1 - mouseObj.x) * 0.0001; */
 
     //console.log(`       `)
-    console.log(mouseObj);
+    //console.log(mouseObj);
     //console.log(`target: ${round(targetMod.x)}, ${round(targetMod.y)}`)
     //console.log(`cam: ${round(camera.rotation.y)}, ${round(camera.rotation.x)}, ${round(camera.rotation.z)}`)
 
@@ -2306,7 +2457,7 @@ function onMouseMove(event) {
         camera.translateX(factor * vModX);
         //camera.translateX(factor);
 
-        console.log(factor);
+        //console.log(factor);
     }
     //#endregion
 
@@ -2323,7 +2474,7 @@ function onMouseMove(event) {
     if (mouseObj.oldY != mouseObj.directionY) {
         timeDirStartY = clock.elapsedTime;
         vModY = 0;
-        console.log(`reset vMod`)
+        //console.log(`reset vMod`)
     }
 
     timeDirDeltaY = clock.elapsedTime - timeDirStartY;
@@ -2333,8 +2484,8 @@ function onMouseMove(event) {
     } else {
         vModY = 1;
     }
-    console.log(`delta: ${timeDirDeltaY}`);
-    console.log(`vmod: ${vModY}`);
+    //console.log(`delta: ${timeDirDeltaY}`);
+    //console.log(`vmod: ${vModY}`);
 
     // get new quadrant coordinates of mouse
     mouseObj.y = (event.clientY/*  - (window.innerHeight / 2) */);
@@ -2342,7 +2493,7 @@ function onMouseMove(event) {
     targetMod.y = (1 - mouseObj.y) * 0.0001;
 
     //console.log(`       `)
-    console.log(mouseObj);
+    //console.log(mouseObj);
     //console.log(`target: ${round(targetMod.Y)}, ${round(targetMod.y)}`)
     //console.log(`cam: ${round(camera.rotation.y)}, ${round(camera.rotation.Y)}, ${round(camera.rotation.z)}`)
 
@@ -2353,7 +2504,7 @@ function onMouseMove(event) {
         camera.translateY(factor * vModY);
         //camera.translateY(factor);
 
-        console.log(factor);
+        //console.log(factor);
     }
     //#endregion
 
@@ -2364,6 +2515,13 @@ function round(num) {
     return Math.round(m) / 100 * Math.sign(num);
 }
 
+//#endregion
+
+
+
+/**
+ * Animate
+ */
 const tick = () => {
 
     //#region BASIC
@@ -2382,6 +2540,7 @@ const tick = () => {
     if (!mixerLoaded) {
         if (canBegin && boyMixer && sandWispModel && flowerModel && birdMixer) {
             initTimeline();
+            initRenderOrder();
             mixerLoaded = true;
             console.log(sandWispModel);
             console.log(`%c mixer and timeline loaded`, 'color: #B5B5B5');
