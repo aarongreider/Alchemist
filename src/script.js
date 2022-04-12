@@ -60,6 +60,17 @@ let uniforms = {
     }
 };
 
+window.onload = function () {
+    let val = document.getElementById(`loadingNum`);
+    gsap.to({}, {
+        duration: 8, onUpdate: function () {
+            val.innerHTML = round(this.progress()) * 100;
+        }, onComplete: function () {
+            let startButton = document.querySelector('#splash button');
+            startButton.classList.remove(`deactivated`);
+        }
+    })
+}
 
 //#region Click Listeners
 let cursor = document.getElementById('cursor');
@@ -154,7 +165,7 @@ let blow_kiss_NLA, spin_NLA;
 
 let allNarration, activeSceneNum = 0;
 let fadeOverride = false;
-let sceneCompleted = true;
+//let sceneCompleted = true;
 
 /* function timelineObj(enter, executed, clip) {
     this.enter = enter;
@@ -182,9 +193,25 @@ let gsapT3 = gsap.timeline({ repeat: 0 });
 
 let controls, camera, renderer;
 let meshLoaded = false, mixerLoaded = false, isRotating = true, canBegin = false;
+// !
+let autoRot = false;
 
 let rotObj = new Object3D();
 scene.add(rotObj);
+
+// !
+function autoplay() {
+    this.enabled = false;
+    this.lastMouseTime = 0;
+    this.delta = clock.getElapsedTime() - this.lastMouseTime;
+    this.tick = function () {
+        // enable if no mouse movement for 30s
+        // disable if any mouse movement
+        if (this.enabled) {
+
+        }
+    }
+}
 //#endregion
 
 /**
@@ -814,9 +841,6 @@ function switchGLTFAnims(model, newClip) {
 /**
  * INIT SCENE
  */
-//follow mouse
-let mouseX, mouseY;
-let targetX, targetY;
 function initScene() {
     //#region LISTENERS/SIZE
     /**
@@ -847,14 +871,6 @@ function initScene() {
         bloomPass.blurPass.width = sizes.width;
         bloomPass.blurPass.height = sizes.height;
     })
-
-    //follow mouse
-    function onDocumentMouseMove(event) {
-
-        mouseX = (event.clientX - windowHalfX);
-        mouseY = (event.clientY - windowHalfY);
-
-    }
 
     //#endregion
 
@@ -962,18 +978,6 @@ function setDOFDistance(vec3, dur) {
     }
 }
 
-function initRenderOrder() {
-    /* domeModel.traverse(child => {
-        if (child.material) {
-            child.material.depthTest = false;
-            child.material.depthWrite = false;
-            
-        }
-    });
-    domeModel.renderOrder = 0; */
-    //sandWispModel.renderOrder = 1;
-
-}
 /**
  * INIT TIMELINE
  */
@@ -1038,11 +1042,13 @@ function initTimeline() {
                     }
                 }, `<`)
 
-
-
-
                 // false = fade out | true = custom transition handler
                 //gsapT1.call(function () { fadeOverride = true });
+
+                /* // !
+                gsapT1.call(function () {
+                    _actionsComplete = true;
+                }); */
             }
             //#endregion
         ),
@@ -1204,6 +1210,7 @@ function initTimeline() {
             // play actions
             function () {
                 gsapT1.clear();
+                gsapT1.to({}, { duration: 1, });
 
                 //heart fade in and rotate
 
@@ -1211,7 +1218,7 @@ function initTimeline() {
             //#endregion
         ),
         new timelineObj(
-            'bird glides in', 0,
+            'bird takes off', 0,
             [bird3Model],
             //#region anims
             // ready positions
@@ -1222,8 +1229,8 @@ function initTimeline() {
                 //switchGLTFAnims(bird3Model, bird3Mixer.clipAction(bird3Animations[0]))
                 bird3Mixer.setTime(0);
 
-                camera.position.set(.25, .25, 1);
-                camera.lookAt(new THREE.Vector3(0, 0, 0));
+                camera.position.set(-.5, .1, 1);
+                camera.lookAt(new THREE.Vector3(.5, 0, 0));
                 setDOFDistance(new THREE.Vector3(0, 0, 0), .25);
             },
             // play transition
@@ -1235,7 +1242,7 @@ function initTimeline() {
                 gsapT1.clear();
                 gsapT1_2.clear();
 
-                gsapT1.call(function () {
+                gsapT1.to({}, { duration: 1, }).call(function () {
                     bird3Mixer.setTime(0);
                     var action = bird3Mixer.clipAction(bird3Animations[0]);
                     action.reset();
@@ -1487,6 +1494,7 @@ function initTimeline() {
                 let obj = { 'actors': [water, birdModel] };
                 assignLayers(obj, 0);
 
+                gsapT1.to({}, { duration: 1, });
 
                 //#region bird and bird2 flap
                 gsapT1_2.call(function () {
@@ -1925,6 +1933,8 @@ function initTimeline() {
             function () {
                 gsapT1.clear();
                 gsapT1_2.clear();
+
+                gsapT1.to({}, { duration: 1, });
             }
             //#endregion
         ),
@@ -2207,9 +2217,6 @@ function goToScene(sceneNum) {
     playScene(timelineClips[activeSceneNum], activeSceneNum)
 }
 
-// !
-let autoRot = false;
-
 function playScene(sceneObj, layerNum) {
 
     //console.log(DOFPass);
@@ -2217,6 +2224,8 @@ function playScene(sceneObj, layerNum) {
 
     // !
     autoRot = false;
+    _actionsComplete = false;
+
     console.log(`%c active scene: ${layerNum} ${sceneObj.name}`, 'color: #1BA5D8');
 
     gsapT3.clear();
@@ -2260,16 +2269,11 @@ function playScene(sceneObj, layerNum) {
         //console.log(`PLAY TRANSITION`);
         sceneObj.playActions();
         //console.log(`PLAY ACTIONS`);
+        // !
+        gsapT1.call(function () {
+            _actionsComplete = true;
+        });
     });
-
-    // queue the cursor fade to t2 after t1 has completed
-    /* gsapT1.call(function () { */
-    // ! add to separate function
-    gsapT2.call(function () {
-        cursor.style.display = 'block'
-        //console.log(`%c cursor to block`, `#fefefe`);
-    });
-    /* }); */
 }
 
 function initLayers() {
@@ -2337,6 +2341,8 @@ function degToRad(deg) {
 function swapNarration(newText) {
     //get timeline2, clear t2, fade out and then in narration over duration .5s
 
+    _swapComplete = false;
+
     let narration = document.querySelector(".narrator p");
     //console.log(`${newText.includes('span') ? 'has' : 'does not have'} span`);
     gsapT2.clear();
@@ -2359,6 +2365,11 @@ function swapNarration(newText) {
             gsapT2.to(narration, { duration: (span.length / 25) * 1, opacity: 1 });
         });
     }
+
+    // gsapT2 = completed
+    gsapT2.call(function () {
+        _swapComplete = true;
+    })
 }
 function initNarration() {
     //get array of all narration, get narrator, swap allNarration[i] with narrator on timer
@@ -2386,6 +2397,43 @@ function spliceString(str, substr) {
     return (flag ? spans : false);
 }
 
+//#endregion
+
+
+//#region SCENE COMPLETE
+// on complete of gsapT1
+var actionsComplete = false;
+var swapComplete = false
+
+Object.defineProperty(this, '_actionsComplete', {
+    get: function () { return actionsComplete; },
+    set: function (v) {
+        actionsComplete = v;
+        console.log('Actions completed: ' + v);
+        console.log(sceneCompleted());
+    }
+});
+
+Object.defineProperty(this, '_swapComplete', {
+    get: function () { return swapComplete; },
+    set: function (w) {
+        swapComplete = w;
+        console.log('Swap completed: ' + w);
+        console.log(sceneCompleted());
+    }
+});
+
+function sceneCompleted() {
+    // queue the cursor fade to t2 after t1 has completed
+    //console.log(gsapT2);
+    if (swapComplete && actionsComplete) {
+        cursor.style.display = 'block'
+        console.log(`%c cursor to block`, `color: #fefefe`);
+        return true;
+    } else {
+        return false;
+    }
+}
 //#endregion
 
 
@@ -2540,7 +2588,6 @@ const tick = () => {
     if (!mixerLoaded) {
         if (canBegin && boyMixer && sandWispModel && flowerModel && birdMixer) {
             initTimeline();
-            initRenderOrder();
             mixerLoaded = true;
             console.log(sandWispModel);
             console.log(`%c mixer and timeline loaded`, 'color: #B5B5B5');
@@ -2548,15 +2595,9 @@ const tick = () => {
         }
     } else {
         // Update animation timing
-        //console.log(mixers)
         let mixerUpdateDelta = clock.getDelta();
         for (let i = 0; i < mixers.length; i++) {
             mixers[i].update(mixerUpdateDelta);
-            //mixers[i].setTime(clock.getElapsedTime());
-            //mixers[i].setTime(mixers[i].time + clock.getDelta());
-            //mixers[i].update(clock.getDelta());
-
-            //console.log(`${mixers[i].time}  ${clock.getDelta()}  ${clock.getElapsedTime()}`);
         }
         sandWispModel.rotation.y = clock.getElapsedTime();
     }
