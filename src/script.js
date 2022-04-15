@@ -90,23 +90,32 @@ startButton.addEventListener("click", function () {
 
 let previousButton = document.getElementById('previous');
 previousButton.addEventListener("click", function () {
-    console.log('going to previous page', 'color: lightgreen');
+    console.log('%c going to previous page', 'color: lightgreen');
     previousScene();
 });
 let skipButton = document.getElementById('skip');
 skipButton.addEventListener("click", function () {
-    console.log('skipping to next page', 'color: lightgreen');
+    console.log('%c skipping to next page', 'color: lightgreen');
     advanceScene();
 });
 let restartButton = document.getElementById('restart');
 restartButton.addEventListener("click", function () {
-    console.log('restarting book', 'color: lightgreen');
+    console.log('%c restarting book', 'color: lightgreen');
     restartScene();
+});
+let autoplayButton = document.getElementById('autoplay');
+autoplayButton.addEventListener("click", function () {
+    gsapT1.to({}, {
+        duration: 1,
+        onComplete: function () {
+            autoplay.setEnabled(!autoplay._enabled)
+        }
+    })
 });
 
 let part1Button = document.getElementById('p1');
 part1Button.addEventListener("click", function () {
-    console.log('going to previous page', 'color: lightgreen');
+    console.log('%c going part 1', 'color: lightgreen');
     part1Button.classList.remove('active');
     part2Button.classList.remove('active');
     part3Button.classList.remove('active');
@@ -116,7 +125,7 @@ part1Button.addEventListener("click", function () {
 });
 let part2Button = document.getElementById('p2');
 part2Button.addEventListener("click", function () {
-    console.log('going part 2', 'color: lightgreen');
+    console.log('%c going part 2', 'color: lightgreen');
     part1Button.classList.remove('active');
     part2Button.classList.remove('active');
     part3Button.classList.remove('active');
@@ -126,7 +135,7 @@ part2Button.addEventListener("click", function () {
 });
 let part3Button = document.getElementById('p3');
 part3Button.addEventListener("click", function () {
-    console.log('going part 3', 'color: lightgreen');
+    console.log('%c going part 3', 'color: lightgreen');
     part1Button.classList.remove('active');
     part2Button.classList.remove('active');
     part3Button.classList.remove('active');
@@ -165,13 +174,6 @@ let blow_kiss_NLA, spin_NLA;
 
 let allNarration, activeSceneNum = 0;
 let fadeOverride = false;
-//let sceneCompleted = true;
-
-/* function timelineObj(enter, executed, clip) {
-    this.enter = enter;
-    this.executed = executed;
-    this.clip = clip;
-} */
 
 function timelineObj(name, repeat, actors, readyPositions, playTransition, playActions) {
     this.name = name;
@@ -200,18 +202,33 @@ let rotObj = new Object3D();
 scene.add(rotObj);
 
 // !
-function autoplay() {
-    this.enabled = false;
+function autoplayObj() {
+    this._enabled = false;
     this.lastMouseTime = 0;
     this.delta = clock.getElapsedTime() - this.lastMouseTime;
-    this.tick = function () {
+
+    this.setEnabled = function (bool) {
+        this._enabled = bool;
+        console.log(`%c autoplay: ${autoplay._enabled}`, 'color: lightgreen');
+    }
+
+    this.tickAP = function () {
         // enable if no mouse movement for 30s
         // disable if any mouse movement
-        if (this.enabled) {
-
+        /* console.log(`last mouse time: ${this.lastMouseTime}`)
+        console.log(`enabled: ${this._enabled}`)
+        console.log(`delta: ${this.delta}`) */
+        if (!this._enabled) {
+            this.delta = clock.getElapsedTime() - this.lastMouseTime;
+            if (this.delta > 60) {
+                this.setEnabled(true);
+                console.log(`enabling autoplay`)
+            }
         }
     }
 }
+
+let autoplay = new autoplayObj();
 //#endregion
 
 /**
@@ -2305,7 +2322,7 @@ function assignLayers(sceneObj, layerNum) {
 }
 
 function fadeMats(materials, models, opacity, duration) {
-    console.log(`%c fade mats, o: ${opacity}, d: ${duration}`, `color: #B5B5B5`);
+    //console.log(`%c fade mats, o: ${opacity}, d: ${duration}`, `color: #B5B5B5`);
     if (materials) {
         if (Array.isArray(materials)) {
             materials.forEach(mat => {
@@ -2399,7 +2416,6 @@ function spliceString(str, substr) {
 
 //#endregion
 
-
 //#region SCENE COMPLETE
 // on complete of gsapT1
 var actionsComplete = false;
@@ -2410,7 +2426,7 @@ Object.defineProperty(this, '_actionsComplete', {
     set: function (v) {
         actionsComplete = v;
         console.log('Actions completed: ' + v);
-        console.log(sceneCompleted());
+        //console.log(sceneCompleted());
     }
 });
 
@@ -2419,13 +2435,21 @@ Object.defineProperty(this, '_swapComplete', {
     set: function (w) {
         swapComplete = w;
         console.log('Swap completed: ' + w);
-        console.log(sceneCompleted());
+        //console.log(sceneCompleted());
     }
 });
 
 function sceneCompleted() {
     // queue the cursor fade to t2 after t1 has completed
     //console.log(gsapT2);
+    if (canBegin && autoplay._enabled) {
+        advanceScene();
+    } else if (!canBegin) {
+        startButton.click();
+        autoplay.lastMouseTime = clock.getElapsedTime();
+        autoplay.setEnabled(false);
+    }
+
     if (swapComplete && actionsComplete) {
         cursor.style.display = 'block'
         console.log(`%c cursor to block`, `color: #fefefe`);
@@ -2453,6 +2477,13 @@ document.addEventListener('mousemove', onMouseMove, false);
 
 function onMouseMove(event) {
 
+    if (autoplay._enabled) {
+        autoplay.setEnabled(false);
+        //console.log(`disabling autoplay`);
+
+    }
+    autoplay.lastMouseTime = clock.getElapsedTime();
+
     //#region Mouse X
     // -1 = left, 1 = right
     mouseObj.oldX = mouseObj.directionX;
@@ -2466,7 +2497,7 @@ function onMouseMove(event) {
     if (mouseObj.oldX != mouseObj.directionX) {
         timeDirStartX = clock.elapsedTime;
         vModX = 0;
-        console.log(`reset vMod`)
+        //console.log(`reset vMod`)
     }
 
     timeDirDeltaX = clock.elapsedTime - timeDirStartX;
@@ -2589,7 +2620,6 @@ const tick = () => {
         if (canBegin && boyMixer && sandWispModel && flowerModel && birdMixer) {
             initTimeline();
             mixerLoaded = true;
-            console.log(sandWispModel);
             console.log(`%c mixer and timeline loaded`, 'color: #B5B5B5');
 
         }
@@ -2617,6 +2647,9 @@ const tick = () => {
     //renderer.render(scene, camera);
 
     stats.end()
+
+    autoplay.tickAP();
+    //console.log(autoplay.i);
 
     // Call tick again on the next frame
     requestAnimationFrame(tick);
