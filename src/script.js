@@ -109,6 +109,9 @@ autoplayButton.addEventListener("click", function () {
         duration: 1,
         onComplete: function () {
             autoplay.setEnabled(!autoplay._enabled)
+            if (cursor.style.display == 'block') {
+                advanceScene();
+            }
         }
     })
 });
@@ -210,6 +213,7 @@ function autoplayObj() {
     this.setEnabled = function (bool) {
         this._enabled = bool;
         console.log(`%c autoplay: ${autoplay._enabled}`, 'color: lightgreen');
+        
     }
 
     this.tickAP = function () {
@@ -1010,6 +1014,7 @@ function initTimeline() {
             // ready positions
             function () {
                 // cycle through all actors and set their inital positions
+                scene.background = sceneBG;
                 flowerModel.position.set(0, 0, 0);
                 boyModel.position.set(0, 0, 0);
                 sandWispModel.position.set(-1, 0, -1);
@@ -2102,11 +2107,12 @@ function initTimeline() {
             function () {
                 gsapT1.clear();
 
-                let fadeDur = 8;
+                let fadeDur = 12;
+
                 gsapT1.to(camera.position, {
                     duration: fadeDur, ease: "power2.inOut", x: 0, y: 0, z: 1.5,
                     onUpdate: function () {
-                        camera.lookAt(new THREE.Vector3(0, 0, 0));
+                        camera.lookAt(new THREE.Vector3(0, .35, 0));
                     }
                 }, `<`)
 
@@ -2131,15 +2137,21 @@ function initTimeline() {
                     duration: implodeDur, ease: "power2.in", scale: 12, width: 1080, height: 1080,
                 }, `<`);
 
-                gsapT1.to({}, { duration: fadeDur }).call(
+                gsapT1.to({}, { duration: fadeDur }).call(function () {
                     scene.traverse(child => {
                         if (child.material) {
                             child.material.transparent = true;
                             //child.material.opacity = 0
                             gsapT1.to(child.material, { duration: implodeDur, opacity: 0 }, '<');
                         };
-                    })
-                )
+                    });
+                    gsapT1.to({}, {
+                        duration: implodeDur, onComplete: function () {
+                            scene.background = new THREE.Color(0x000000);
+                        }
+                    }, '<');
+
+                })
             }
             //#endregion
         ),
@@ -2422,41 +2434,45 @@ var actionsComplete = false;
 var swapComplete = false
 
 Object.defineProperty(this, '_actionsComplete', {
-    get: function () { return actionsComplete; },
+    get: function () { console.log(`get actions`); return actionsComplete; },
     set: function (v) {
         actionsComplete = v;
         console.log('Actions completed: ' + v);
         //console.log(sceneCompleted());
+
+        if (_swapComplete && _actionsComplete) {
+            sceneCompleted();
+        }
     }
 });
 
 Object.defineProperty(this, '_swapComplete', {
-    get: function () { return swapComplete; },
+    get: function () { console.log(`get swap`); return swapComplete; },
     set: function (w) {
         swapComplete = w;
         console.log('Swap completed: ' + w);
         //console.log(sceneCompleted());
+
+        if (_swapComplete && _actionsComplete) {
+            sceneCompleted();
+        }
     }
 });
 
 function sceneCompleted() {
     // queue the cursor fade to t2 after t1 has completed
-    //console.log(gsapT2);
-    if (canBegin && autoplay._enabled) {
-        advanceScene();
-    } else if (!canBegin) {
+    console.log(`scene completed?`);
+    cursor.style.display = 'block';
+    console.log(`%c cursor to block`, `color: #fefefe`);
+    if (canBegin) {
+        if (autoplay._enabled) {
+            advanceScene();
+        }
+    } /* else if (!canBegin) {
         startButton.click();
         autoplay.lastMouseTime = clock.getElapsedTime();
         autoplay.setEnabled(false);
-    }
-
-    if (swapComplete && actionsComplete) {
-        cursor.style.display = 'block'
-        console.log(`%c cursor to block`, `color: #fefefe`);
-        return true;
-    } else {
-        return false;
-    }
+    } */
 }
 //#endregion
 
