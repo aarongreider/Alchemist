@@ -1,23 +1,360 @@
-*
-{
+@font-face {
+    font-family: 'neacademia_display_trialIt';
+    src: url(assets/fonts/e66b2e59c5190fc76cc8257261e435e5.woff2) format('woff2'),
+        url(assets/fonts/dbb322ca24b4653c27ed09076544aa9d.woff) format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'neacademia_display_trialRg';
+    src: url(assets/fonts/3ff2066fef8c9f2af606f919669f42ca.woff2) format('woff2'),
+        url(assets/fonts/cd87428aa653155c40b67ce5a46fdad6.woff) format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+* {
     margin: 0;
     padding: 0;
+    /* overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: scroll; */
 }
 
 html,
-body
-{
+body {
     height: 100vh;
-    font-family: 'Poppins';
+    font-family: 'Roboto', sans-serif;
+    font-weight: 100;
 }
 
-.webgl
-{
+.webgl {
     position: fixed;
     top: 0;
     left: 0;
     outline: none;
 }
 
+#canvasContainer {
+    z-index: -5;
+}
+
+@keyframes blink {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: .6;
+        transform: scale(1);
+    }
+}
+
+#cursor {
+    height: 3rem;
+    width: 3rem;
+    background-color: aliceblue;
+    border-radius: 100%;
+
+    position: absolute;
+    z-index: 5;
+    top: 82vh;
+    left: 84vw;
+
+    display: flex;
+    justify-content: center;
+    align-content: center;
+
+    transform-origin: center;
+    animation: blink .85s infinite;
+    animation-direction: alternate;
+
+    display: none;
+}
+
+#cursor div {
+    height: 50%;
+    width: 50%;
+    outline: 2px whitesmoke;
+    background-color: none;
+
+    display: flex;
+    justify-content: center;
+    align-content: center;
+
+    transform-origin: center;
+    animation: blink .85s infinite;
+    animation-direction: alternate;
+}
+
+video {
+    position: absolute;
+    width: auto;
+    height: 135vh;
+    z-index: 0;
+
+    object-fit: cover;
+}
+
+#splash {
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    z-index: 10;
+
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    align-items: center;
+
+    background-color: black;
+    background-image: url("https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/splash_bg.jpg");
+    background-size: cover;
+
+    overflow: hidden;
+}
+
+#splash div {
+    margin: 0 5vw;
+
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+
+    align-self: flex-start;
+    z-index: 11;
+}
+
+#splash h1 {
+    font-family: 'neacademia_display_trialIt';
+    font-size: 5rem;
+    text-align: left;
+
+    margin: 9vh 0 0rem;
+
+    color: whitesmoke;
+}
+
+#splash p {
+    font-family: 'neacademia_display_trialRg';
+    font-size: 1.6rem;
+    text-align: left;
+    color: whitesmoke;
+
+    min-width: 10rem;
+    max-width: 32rem;
+}
+
+#splash button {
+    font-family: 'neacademia_display_trialRg';
+    font-size: 1.5rem;
+
+    margin: 4rem 0;
+    padding: 0.75rem 2rem;
+
+    color: white;
+    background: none;
+    border: 1px solid whitesmoke;
+
+    box-shadow: 0 0 50px #fff;
+}
+
+#splash .deactivated {
+    color: grey !important;
+    background: none !important;
+    border: 1px solid grey !important;
+    box-shadow: none !important;
+}
+
+
+.narrator {
+    height: 90vh;
+    width: 100vw;
+
+    position: absolute;
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.narrator p {
+    font-family: 'neacademia_display_trialRg';
+    font-size: 1.5rem;
+    text-align: center;
+    color: whitesmoke;
+
+    position: absolute;
+    z-index: 5;
+
+    min-width: 30rem;
+    max-width: 40rem;
+    width: 60vw;
+
+    text-shadow: 1px 1px 4px rgb(0 0 0 / 56%);
+}
+
+p i {
+    font-family: 'neacademia_display_trialIt';
+}
+
+.allNarration {
+    display: none;
+}
+
+#UI {
+    height: auto;
+    width: auto;
+    margin: 0rem 0rem;
+
+    position: absolute;
+
+    display: flex;
+    flex-flow: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+
+    z-index: 5;
+}
+
+#UI *,
+button {
+    cursor: pointer;
+    transition: transform .25s, opacity .25s;
+    transition-timing-function: ease-out;
+}
+
+#UI p:hover:not(.noHover),
+#UI img:hover,
+button:hover {
+    transform: scale(1.05);
+}
+
+#UI span:hover:not(.line) {
+    opacity: 1;
+}
+
+#UI p {
+    font-family: 'neacademia_display_trialRg';
+    text-transform: uppercase;
+    letter-spacing: .2rem;
+    font-size: .85rem;
+    text-align: left;
+    color: whitesmoke;
+
+    position: relative;
+    z-index: inherit;
+
+    /* min-width: 30rem;
+    max-width: 40rem; */
+    width: auto;
+
+    text-shadow: 1px 1px 4px rgb(0 0 0 / 56%);
+}
+
+#UI p i {
+    text-transform: capitalize;
+    font-variant: normal !important;
+    letter-spacing: 0;
+    font-size: 1.1em;
+
+}
+
+#UI div {
+    overflow: visible;
+
+    height: auto;
+    width: auto;
+    margin: 1px;
+
+    z-index: inherit;
+
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+#UI div span {
+    opacity: .5;
+}
+
+#UI div .active {
+    opacity: 1;
+}
+
+#UI img {
+    width: 1.5rem;
+    height: auto;
+    margin: 0 1rem;
+
+    z-index: inherit;
+}
+
+#autoplay p {
+    font-size: .65rem;
+    padding: 1rem 0;
+}
+
+#autoplay img {
+    opacity: 0;
+}
+
+#chapterNav {
+    z-index: 11 !important;
+    margin: 1rem 0 !important;
+}
+
+
+@media only screen and (min-device-width: 800px) and (max-device-width: 550px) and (-webkit-min-device-pixel-ratio: 2) {
+
+    #splash h1 {
+        font-size: 3rem;
+        margin: 9vh 0 0rem;
+    }
+
+    #splash p {
+        font-size: 1rem;
+        min-width: 5rem;
+        max-width: 15rem;
+    }
+}
+
+@media (max-width: 800px) {
+    #splash h1 {
+        font-size: 3rem !important;
+        margin: 4vh 0 0rem;
+    }
+
+    #splash p {
+        font-size: 1rem;
+        min-width: 5rem;
+        max-width: 15rem;
+    }
+
+    #splash {
+        overflow-y: scroll;
+    }
+}
+
+@media (max-height: 550px) {
+    #splash h1 {
+        font-size: 3rem !important;
+        margin: 4vh 0 0rem;
+    }
+
+    #splash p {
+        font-size: 1.25rem;
+        min-width: 5rem;
+        max-width: 80vw;
+    }
+
+    #splash {
+        overflow-y: scroll;
+    }
+}
 
 /*# sourceMappingURL=main.css.map*/

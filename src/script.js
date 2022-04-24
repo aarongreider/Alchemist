@@ -68,6 +68,18 @@ window.onload = function () {
         }, onComplete: function () {
             let startButton = document.querySelector('#splash button');
             startButton.classList.remove(`deactivated`);
+            if (autoplay._enabled) {
+                console.log('%c starting 3D experience', 'color: lightgreen');
+                canBegin = true;
+                windVideo.play();
+                let chimesAudio = document.getElementById('chimesAudio');
+                chimesAudio.play();
+                gsap.to(document.getElementById('splash'), {
+                    duration: 2, ease: "power2.inOut", opacity: 0, onComplete: function () {
+                        document.getElementById('splash').style.display = 'none';
+                    }
+                });
+            }
         }
     })
 }
@@ -81,6 +93,8 @@ startButton.addEventListener("click", function () {
     console.log('%c starting 3D experience', 'color: lightgreen');
     canBegin = true;
     windVideo.play();
+    let chimesAudio = document.getElementById('chimesAudio');
+    chimesAudio.play();
     gsap.to(document.getElementById('splash'), {
         duration: 2, ease: "power2.inOut", opacity: 0, onComplete: function () {
             document.getElementById('splash').style.display = 'none';
@@ -167,6 +181,8 @@ let gltfModels = [];
 let mixers = [];
 
 let windVideo;
+let APindicator = document.querySelector('#autoplay p span');
+
 let boxMesh, sphereMesh, pointsMesh, water;
 let boyMixer, girlMixer, heartMixer, birdMixer, bird2Mixer, bird3Mixer, fishMixer, treeMixer;
 let boyAnimations, girlAnimations, heartAnimations, birdAnimations, bird2Animations, bird3Animations, fishAnimations;
@@ -213,7 +229,12 @@ function autoplayObj() {
     this.setEnabled = function (bool) {
         this._enabled = bool;
         console.log(`%c autoplay: ${autoplay._enabled}`, 'color: lightgreen');
-        
+
+        if (bool) {
+            APindicator.innerHTML = 'on';
+        } else {
+            APindicator.innerHTML = 'off';
+        }
     }
 
     this.tickAP = function () {
@@ -862,6 +883,7 @@ function switchGLTFAnims(model, newClip) {
 /**
  * INIT SCENE
  */
+let bodyDOM = document.querySelector('body');
 function initScene() {
     //#region LISTENERS/SIZE
     /**
@@ -872,6 +894,10 @@ function initScene() {
         height: window.innerHeight
     }
 
+
+    bodyDOM.style.height = sizes.height;
+    bodyDOM.style.width = sizes.width;
+
     axesHelper = new THREE.AxesHelper(5);
     //scene.add(axesHelper);
 
@@ -879,6 +905,9 @@ function initScene() {
         // Update sizes
         sizes.width = window.innerWidth
         sizes.height = window.innerHeight
+
+        bodyDOM.style.height = sizes.height;
+        bodyDOM.style.width = sizes.width;
 
         // Update camera
         camera.aspect = sizes.width / sizes.height
@@ -2108,50 +2137,52 @@ function initTimeline() {
                 gsapT1.clear();
 
                 let fadeDur = 12;
+                let implodeDur = .15;
+
+                gsapT1.addLabel(`bloomStart`, "0")
+                gsapT1.addLabel(`implode`, "12")
+                gsapT1.addLabel(`disappear`, "12")
 
                 gsapT1.to(camera.position, {
                     duration: fadeDur, ease: "power2.inOut", x: 0, y: 0, z: 1.5,
                     onUpdate: function () {
                         camera.lookAt(new THREE.Vector3(0, .35, 0));
                     }
-                }, `<`)
+                }, `bloomStart`)
 
                 //bloom to fill screen
                 gsapT1.to(bloomPass, {
                     duration: fadeDur, ease: "power2.inOut", intensity: 50,
-                }, `<`);
+                }, `bloomStart`);
                 gsapT1.to(bloomPass.blurPass, {
                     duration: fadeDur, ease: "power2.inOut", scale: 15, width: 50, height: 1080,
-                }, `<`);
+                }, `bloomStart`);
 
                 /* console.log(bloomPass);
                 console.log(bloomPass.blurPass); */
 
 
-                // default bloom settings
-                let implodeDur = .1;
+                // implode bloom settings
                 gsapT1.to(bloomPass, {
                     duration: implodeDur, ease: "power2.in", intensity: 50, luminanceThreshold: 0,
-                });
+                }, "implode");
                 gsapT1.to(bloomPass.blurPass, {
                     duration: implodeDur, ease: "power2.in", scale: 12, width: 1080, height: 1080,
-                }, `<`);
+                }, "implode");
 
-                gsapT1.to({}, { duration: fadeDur }).call(function () {
-                    scene.traverse(child => {
-                        if (child.material) {
-                            child.material.transparent = true;
-                            //child.material.opacity = 0
-                            gsapT1.to(child.material, { duration: implodeDur, opacity: 0 }, '<');
-                        };
-                    });
-                    gsapT1.to({}, {
-                        duration: implodeDur, onComplete: function () {
-                            scene.background = new THREE.Color(0x000000);
-                        }
-                    }, '<');
+                scene.traverse(child => {
+                    if (child.material) {
+                        child.material.transparent = true;
+                        //child.material.opacity = 0
+                        gsapT1.to(child.material, { duration: implodeDur, opacity: 0 }, `disappear`);
+                    };
+                });
+                gsapT1.to({}, {
+                    duration: implodeDur, onComplete: function () {
+                        scene.background = new THREE.Color(0x000000);
+                    }
+                }, `disappear`);
 
-                })
             }
             //#endregion
         ),
@@ -2253,7 +2284,7 @@ function playScene(sceneObj, layerNum) {
 
     // !
     autoRot = false;
-    _actionsComplete = false;
+    autoplay.actionsComplete = false;
 
     console.log(`%c active scene: ${layerNum} ${sceneObj.name}`, 'color: #1BA5D8');
 
@@ -2300,7 +2331,7 @@ function playScene(sceneObj, layerNum) {
         //console.log(`PLAY ACTIONS`);
         // !
         gsapT1.call(function () {
-            _actionsComplete = true;
+            autoplay.actionsComplete = true;
         });
     });
 }
@@ -2370,7 +2401,7 @@ function degToRad(deg) {
 function swapNarration(newText) {
     //get timeline2, clear t2, fade out and then in narration over duration .5s
 
-    _swapComplete = false;
+    autoplay.swapComplete = false;
 
     let narration = document.querySelector(".narrator p");
     //console.log(`${newText.includes('span') ? 'has' : 'does not have'} span`);
@@ -2397,7 +2428,7 @@ function swapNarration(newText) {
 
     // gsapT2 = completed
     gsapT2.call(function () {
-        _swapComplete = true;
+        autoplay.swapComplete = true;
     })
 }
 function initNarration() {
@@ -2430,30 +2461,32 @@ function spliceString(str, substr) {
 
 //#region SCENE COMPLETE
 // on complete of gsapT1
-var actionsComplete = false;
-var swapComplete = false
+//var actionsComplete = false;
+//var swapComplete = false;
 
-Object.defineProperty(this, '_actionsComplete', {
-    get: function () { console.log(`get actions`); return actionsComplete; },
+Object.defineProperty(autoplay, 'actionsComplete', {
+    _actionsComplete: false,
+    get: function () { console.log(`get actions`); return this._actionsComplete; },
     set: function (v) {
-        actionsComplete = v;
+        this._actionsComplete = v;
         console.log('Actions completed: ' + v);
         //console.log(sceneCompleted());
 
-        if (_swapComplete && _actionsComplete) {
+        if (autoplay.swapComplete && this._actionsComplete) {
             sceneCompleted();
         }
     }
 });
 
-Object.defineProperty(this, '_swapComplete', {
-    get: function () { console.log(`get swap`); return swapComplete; },
+Object.defineProperty(autoplay, 'swapComplete', {
+    _swapComplete: false,
+    get: function () { console.log(`get swap`); return this._swapComplete; },
     set: function (w) {
-        swapComplete = w;
+        this._swapComplete = w;
         console.log('Swap completed: ' + w);
         //console.log(sceneCompleted());
 
-        if (_swapComplete && _actionsComplete) {
+        if (this._swapComplete && autoplay.actionsComplete) {
             sceneCompleted();
         }
     }

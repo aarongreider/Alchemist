@@ -1,49 +1,75 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ThreeJS Starter</title><script defer="defer" src="bundle.ace042604919c1b867d3.js"></script><link href="main.css" rel="stylesheet"></head><body><canvas class="webgl"></canvas><script id="vertexShader" type="x-shader/x-vertex">varying vec2 vUv;
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ThreeJS Starter</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet"><meta name="viewport" content="width=device-width,initial-scale=1"><script defer="defer" src="bundle.8a4d0b11c446d2b340f0.js"></script><link href="main.css" rel="stylesheet"></head><body id="body"><script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script><script type="importmap">{
+    				"imports": {
+    					"three": "../build/three.module.js"
+    				}
+    			}</script><div id="canvasContainer"><canvas class="webgl"></canvas></div><div id="splash"><video id="starsVideo" playsinline autoplay muted loop><source src="065e345d00ff1819a484.mp4" type="video/mp4"></video><audio autoplay loop id="chimesAudio"><source src="07da768f9de2b6bafd65.mp3"></audio><div><h1>The Alchemist</h1><p>This web-storybook is based on the classic inspirational novel by Paulo Coelho.<br><br>This webpage will step you through a fresh reimagining of the story, a visual transition of the old world with the new.</p><p><br><span id="loadingNum">0</span>% / 100%</p><button class="deactivated">BEGIN</button></div></div><div id="cursor"><div><div></div></div></div><div id="UI"><div id="chapterNav"><img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/ham.png"><p class="noHover"><span id="p1" class="active">part i, <i>The Desert</i></span> <span class="line">&nbsp;&nbsp;&nbsp;&nbsp;</span> <span id="p2">part ii, <i>The Falcon</i></span> <span class="line">&nbsp;&nbsp;&nbsp;&nbsp;</span> <span id="p3">part iii, <i>The Wind</i></span></p></div><div id="previous"><img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/previous.png"><p>previous</p></div><div id="skip"><img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/skip.png"><p>skip</p></div><div id="restart"><img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/restart.png"><p>restart</p></div><div id="autoplay"><img src="https://raw.githubusercontent.com/aarongreider/Alchemist/master/static/html/restart.png"><p>autoplay: <span>off</span></p></div></div><div class="narrator"><p></p></div><div class="allNarration"><p><span>The boy looked out at the horizon. There were mountains in the distance.</span> <span>And there were dunes, rocks, and plants that insisted on living where survival seemed impossible.</span></p><p><i>"What do you want here today?"</i> the desert asked him. <i>"Didn't you spend enough time looking at me yesterday?"</i></p><p><span><i>"Somewhere you are holding the person I love,"</i> the boy said.</span> <span><i>"So, when I look out over your sands, I am also looking at her."</i></span></p><p><i>"I want to return to her, and I need your help so that I can turn myself into the wind."</i></p><p><i>"What is love?"</i> the desert asked.</p><p><i>"Love is the falcon's flight over your sands."</i></p><p><span><i>"Because for him, you are a green field, from which he always returns with game."</i></span> <span><i>"He knows your rocks, your dunes, and your mountains, and you are generous to him."</i></span></p><p><i>"The falcon's beak carries bits of me, myself,"</i> the desert said.</p><p><i>"For years, I care for his game, feeding it with the little water that I have, and then I show him where the game is."</i></p><p><i>"And, one day, as I enjoy the fact that his game thrives on my surface, the falcon dives out of the sky, and takes away what I've created."</i></p><p><i>"But that's why you created the game in the first place,"</i> the boy answered. <i>"To nourish the falcon. And the falcon then nourishes man."</i></p><p><i>"And, eventually, man will nourish your sands, where the game will once again flourish. That's how the world goes."</i></p><p><i>"So is that what love is?"</i></p><p><span><i>"Yes, that's what love is."</i></span> <span>The desert didn't answer him for a few moments.</span></p><p>Then it told him, <i>"I'll give you my sands to help the wind to blow, but, alone, I can't do anything. You have to ask for help from the wind."</i></p><p>A breeze began to blow. The tribesmen watched the boy from a distance, as the wind approached the boy and touched his face.</p><p><i>"Help me,"</i> the boy said. <i>"There was a day you carried the voice of my loved one to me."</i></p></div><video id="windVideo" loop crossorigin="anonymous" playsinline style="height:1px;width:1px;display:none"><source src="578e709bfd03800e0424.mp4" type="video/mp4;"></video><script id="vertexShader" type="x-shader/x-vertex">varying vec2 vUv;
+        
+        	void main()	{
+        		vUv = uv;
+        		//gl_Position = vec4(position, 1.0 );
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+        	}</script><script id="fragmentShader" type="x-shader/x-fragment">varying vec2 vUv;
+        			uniform float time;
+                    uniform vec2 resolution;
+                    uniform sampler2D sampleTxt;
+        
+                    void main() {
+                        	vec3 c;
+                            //z -> distance between colors
+                            //l -> length of uv and p OR time
+                            float l;
+                            float z = time;
+                            //each frame run 3 iterations for rgb
+                            for(int i=0;i<3;i++) {
+                                float a = 0.5;
+                                //vec2 uv,p = ( gl_FragCoord.xy / resolution.xy ) - a;
+                                //uv = p;
+                                vec2 uv = vUv;
+                                vec2 p = ( gl_FragCoord.xy / resolution.xy ) - abs(sin(vUv));
+                                //uv-=0.25;
+                                p -= .5;
+                                p.x *= resolution.x/resolution.y;
+                                z += .07;
+                                l = length(p);
+                                uv += p/l*(sin(z)+.25)*sin(l*9.-z-z);
+                                c[i] = .01/length(mod(uv,1.)-.5);
+                            } 
+                            //gl_FragColor=vec4(c/l + 0.1, c/l);
+                            gl_FragColor=vec4(c/l, (c.x+c.y+c.z));
+                    }</script><script id="fragmentShader2" type="x-shader/x-fragment">varying vec2 vUv;
+                    uniform sampler2D sampleTxt;
+        
+                    void main() { 
+                        gl_FragColor = texture2D(sampleTxt,vUv);
+                    }</script><script id="fragmentShader3" type="x-shader/x-fragment">uniform float time;
+                    varying vec2 vUv;
     
-    	void main()	{
-    		vUv = uv;
-    		//gl_Position = vec4(position, 1.0 );
-            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-    	}</script><script id="fragmentShader" type="x-shader/x-fragment">varying vec2 vUv;
-    			uniform float time;
-                uniform vec2 resolution;
-                uniform sampler2D sampleTxt;
+                    void main( void ) {
+                        vec2 position = - 1.0 + 2.0 * vUv;
     
-                void main() {
-                    	vec3 c;
-                        //z -> distance between colors
-                        //l -> length of uv and p OR time
-                        float l;
-                        float z = time;
-                        //each frame run 3 iterations for rgb
-                        for(int i=0;i<3;i++) {
-                            float a = 0.5;
-                            //vec2 uv,p = ( gl_FragCoord.xy / resolution.xy ) - a;
-                            //uv = p;
-                            vec2 uv = vUv;
-                            vec2 p = ( gl_FragCoord.xy / resolution.xy ) - abs(sin(vUv));
-                            //uv-=0.25;
-                            p -= .5;
-                            p.x *= resolution.x/resolution.y;
-                            z += .07;
-                            l = length(p);
-                            uv += p/l*(sin(z)+.25)*sin(l*9.-z-z);
-                            c[i] = .01/length(mod(uv,1.)-.5);
-                        } 
-                        gl_FragColor=vec4(c/l+.1,0);
-                }</script><script id="fragmentShader2" type="x-shader/x-fragment">varying vec2 vUv;
-                uniform sampler2D sampleTxt;
+                        float red = abs( sin( position.x * position.y + time / 5.0 ) );
+                        float green = abs( sin( position.x * position.y + time / 4.0 ) );
+                        float blue = abs( sin( position.x * position.y + time / 3.0 ) );
+                        gl_FragColor = vec4( red, green, blue, 1.0 );
+                    }</script><script id="fragmentShader4" type="x-shader/x-fragment">//uniform float thickness;
+    			varying vec3 vCenter;
+    			void main() {
+                    float thickness = 1;
+    				vec3 afwidth = fwidth( vCenter.xyz );
+    				vec3 edge3 = smoothstep( ( thickness - 1.0 ) * afwidth, thickness * afwidth, vCenter.xyz );
+    				float edge = 1.0 - min( min( edge3.x, edge3.y ), edge3.z );
     
-                void main() { 
-                    gl_FragColor = texture2D(sampleTxt,vUv);
-                }</script><script id="fragmentShader3" type="x-shader/x-fragment">uniform float time;
-                varying vec2 vUv;
-
-                void main( void ) {
-                    vec2 position = - 1.0 + 2.0 * vUv;
-
-                    float red = abs( sin( position.x * position.y + time / 5.0 ) );
-                    float green = abs( sin( position.x * position.y + time / 4.0 ) );
-                    float blue = abs( sin( position.x * position.y + time / 3.0 ) );
-                    gl_FragColor = vec4( red, green, blue, 1.0 );
-                }</script><script id="fragmentShader4" type="x-shader/x-fragment"></script></body></html>
+    				gl_FragColor.rgb = gl_FrontFacing ? vec3( 0.9, 0.9, 1.0 ) : vec3( 0.4, 0.4, 0.5 );
+    				//gl_FragColor.a = edge;
+    
+    			}</script><script id="vertexParticleShader" type="x-shader/x-vertex">uniform float pointMultiplier;
+        
+        	void main()	{
+        		vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+                gl_Position = projectionMatrix * mvPosition;
+                gl_PointSize = pointMultiplier / gl_Position.w;
+        	}</script><script id="fragmentSimulation" type="x-shader/x-fragment">uniform sampler2D sampleTxt;
+            
+                        void main() { 
+                            gl_FragColor = texture2D(sampleTxt, gl_PointCoord);
+                        }</script></body></html>

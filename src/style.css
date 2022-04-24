@@ -294,7 +294,65 @@ button:hover {
     z-index: inherit;
 }
 
+#autoplay p {
+    font-size: .65rem;
+    padding: 1rem 0;
+}
+
+#autoplay img {
+    opacity: 0;
+}
+
 #chapterNav {
     z-index: 11 !important;
     margin: 1rem 0 !important;
+}
+
+
+@media only screen and (min-device-width: 800px) and (max-device-width: 550px) and (-webkit-min-device-pixel-ratio: 2) {
+
+    #splash h1 {
+        font-size: 3rem;
+        margin: 9vh 0 0rem;
+    }
+
+    #splash p {
+        font-size: 1rem;
+        min-width: 5rem;
+        max-width: 15rem;
+    }
+}
+
+@media (max-width: 800px) {
+    #splash h1 {
+        font-size: 3rem !important;
+        margin: 4vh 0 0rem;
+    }
+
+    #splash p {
+        font-size: 1rem;
+        min-width: 5rem;
+        max-width: 15rem;
+    }
+
+    #splash {
+        overflow-y: scroll;
+    }
+}
+
+@media (max-height: 550px) {
+    #splash h1 {
+        font-size: 3rem !important;
+        margin: 4vh 0 0rem;
+    }
+
+    #splash p {
+        font-size: 1.25rem;
+        min-width: 5rem;
+        max-width: 80vw;
+    }
+
+    #splash {
+        overflow-y: scroll;
+    }
 }
